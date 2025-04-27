@@ -9,7 +9,7 @@ const accountService = require('./account.service');
 // routes
 router.post('/authenticate', authenticateSchema, authenticate);
 router.post('/refresh-token', refreshToken);
-router.post('/revoke-token', authorize(), revokeTokenSchema, revokeToken);
+router.post('/revoke-token', revokeTokenSchema, revokeToken);
 router.post('/register', registerSchema, register);
 router.post('/verify-email', verifyEmailSchema, verifyEmail);
 router.post('/forgot-password', forgotPasswordSchema, forgotPassword);
@@ -70,11 +70,6 @@ function revokeToken(req, res, next) {
     const ipAddress = req.ip;
 
     if (!token) return res.status(400).json({ message: 'Token is required' });
-
-    // users can revoke their own tokens and admins can revoke any tokens
-    if (!req.user.ownsToken(token) && req.user.role !== Role.Admin) {
-        return res.status(401).json({ message: 'Unauthorized' });
-    }
 
     accountService.revokeToken({ token, ipAddress })
         .then(() => res.json({ message: 'Token revoked' }))

@@ -22,14 +22,21 @@ export class UpdateComponent implements OnInit {
     ) { }
 
     ngOnInit() {
+        // Get the current account value
         this.account = this.accountService.accountValue;
+        
+        // If no account is found, redirect to login
+        if (!this.account) {
+            this.router.navigate(['/account/login']);
+            return;
+        }
         
         // Initialize the form with existing account values
         this.form = this.formBuilder.group({
-            title: [this.account?.title || '', Validators.required],
-            firstName: [this.account?.firstName || '', Validators.required],
-            lastName: [this.account?.lastName || '', Validators.required],
-            email: [this.account?.email || '', [Validators.required, Validators.email]],
+            title: [this.account.title || '', Validators.required],
+            firstName: [this.account.firstName || '', Validators.required],
+            lastName: [this.account.lastName || '', Validators.required],
+            email: [this.account.email || '', [Validators.required, Validators.email]],
             password: ['', [Validators.minLength(6)]],
             confirmPassword: ['']
         }, {
