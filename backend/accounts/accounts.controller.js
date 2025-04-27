@@ -34,27 +34,58 @@ function authenticateSchema(req, res, next) {
 function authenticate(req, res, next) {
     const { email, password } = req.body;
     const ipAddress = req.ip;
+    
+    // Add more detailed logging
+    console.log(`Authentication attempt for email: ${email}, IP: ${ipAddress}`);
+    
     accountService.authenticate({ email, password, ipAddress })
         .then(({ refreshToken, ...account }) => {
+            // Log successful authentication
+            console.log(`Authentication successful for user ID: ${account.id}`);
+            
+            // Set the refresh token cookie
             setTokenCookie(res, refreshToken);
+            
             // Include user ID in the response
             res.json({
                 ...account,
-                id: account.id // Ensure this is included
+                id: account.id
             });
         })
-        .catch(next);
+        .catch(error => {
+            // Log authentication failure
+            console.error(`Authentication failed: ${error.message}`);
+            next(error);
+        });
 }
 
 function refreshToken(req, res, next) {
-    const token = req.cookies.refreshToken;
+    // Accept token from cookies or request body
+    const token = req.cookies.refreshToken || req.body.refreshToken;
     const ipAddress = req.ip;
+    
+    // Log refresh token attempt
+    console.log(`Refresh token attempt, IP: ${ipAddress}`);
+    
+    if (!token) {
+        return res.status(400).json({ message: 'Refresh token is required' });
+    }
+
     accountService.refreshToken({ token, ipAddress })
         .then(({ refreshToken, ...account }) => {
+            // Log successful token refresh
+            console.log(`Token refresh successful for user ID: ${account.id}`);
+            
+            // Set the refresh token cookie
             setTokenCookie(res, refreshToken);
+            
             res.json(account);
         })
-        .catch(next);
+        .catch(error => {
+            // Log token refresh failure
+            console.error(`Token refresh failed: ${error.message}`);
+            next(error);
+        });
 }
 
 function revokeTokenSchema(req, res, next) {
@@ -229,10 +260,19 @@ function _delete(req, res, next) {
 // helper functions
 
 function setTokenCookie(res, token) {
-    // create cookie with refresh token that expires in 7 days
+    // Create cookie with refresh token that expires in 7 days
     const cookieOptions = {
         httpOnly: true,
-        expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict'
     };
+    
+    console.log('Setting refresh token cookie with options:', {
+        secure: cookieOptions.secure,
+        sameSite: cookieOptions.sameSite,
+        expiresIn: '7 days'
+    });
+    
     res.cookie('refreshToken', token, cookieOptions);
 }

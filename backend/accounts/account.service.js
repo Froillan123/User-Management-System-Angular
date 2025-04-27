@@ -24,80 +24,126 @@ module.exports = {
 };
 
 async function authenticate({ email, password, ipAddress }) {
-    const account = await db.Account.scope('withHash').findOne({ where: { email } });
+    try {
+        // Find account by email
+        const account = await db.Account.scope('withHash').findOne({ where: { email } });
 
-    if (!account) {
-        throw 'Email does not exist';
+        // Check if account exists
+        if (!account) {
+            console.error(`Authentication failed: Email not found - ${email}`);
+            throw new Error('Email not found');
+        }
+
+        // Check if email is verified
+        if (!account.isVerified) {
+            console.error(`Authentication failed: Email not verified - ${email}`);
+            throw new Error('Email not verified');
+        }
+
+        // Check if account is active
+        if (account.status !== 'Active') {
+            console.error(`Authentication failed: Account inactive - ${email} (Status: ${account.status})`);
+            throw new Error('Account is inactive');
+        }
+
+        // Check password
+        const isPasswordValid = await bcrypt.compare(password, account.passwordHash);
+        if (!isPasswordValid) {
+            console.error(`Authentication failed: Incorrect password - ${email}`);
+            throw new Error('Password is incorrect');
+        }
+
+        // Generate tokens
+        const jwtToken = generateJwtToken(account);
+        const refreshToken = generateRefreshToken(account, ipAddress);
+
+        // Save refresh token to database
+        await refreshToken.save();
+
+        console.log(`Authentication successful: ${email} (ID: ${account.id})`);
+
+        // Return account details and tokens
+        return {
+            ...basicDetails(account),
+            jwtToken,
+            refreshToken: refreshToken.token
+        };
+    } catch (error) {
+        console.error('Authentication error:', error.message || error);
+        throw error.message || 'Authentication failed';
     }
-
-    if (!account.isVerified) {
-        throw 'Email not yet verified';
-    }
-
-    if (account.status !== 'Active') {
-        throw 'Account is inactive.';
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, account.passwordHash);
-    if (!isPasswordValid) {
-        throw 'Password is incorrect';
-    }
-
-    const jwtToken = generateJwtToken(account);
-    const refreshToken = generateRefreshToken(account, ipAddress);
-
-    await refreshToken.save();
-
-    return {
-        ...basicDetails(account),
-        jwtToken,
-        refreshToken: refreshToken.token
-    };
 }
 
 async function refreshToken({ token, ipAddress }) {
     try {
         if (!token) {
-            throw 'Token is required';
+            throw new Error('Token is required');
         }
 
-        const refreshToken = await getRefreshToken(token);
+        // Log refresh attempt
+        console.log(`Attempting to refresh token: ${token.substring(0, 10)}...`);
+
+        const refreshToken = await db.RefreshToken.findOne({ 
+            where: { token },
+            include: [{ model: db.Account }]
+        });
+
         if (!refreshToken) {
-            throw 'Invalid token';
+            console.error('Refresh token not found in database');
+            throw new Error('Invalid token');
         }
 
-        const account = await refreshToken.getAccount();
+        // Access account directly if it was included, or fetch it if needed
+        const account = refreshToken.Account || await refreshToken.getAccount();
         if (!account) {
-            throw 'Account not found';
+            console.error('Account not found for refresh token');
+            throw new Error('Account not found');
+        }
+
+        // Check if account is active
+        if (account.status !== 'Active') {
+            console.error(`Account status is not active: ${account.status}`);
+            throw new Error('Account is not active');
         }
 
         // Check if token is expired
         if (refreshToken.expires < new Date()) {
-            throw 'Token has expired';
+            console.error('Refresh token has expired');
+            throw new Error('Token has expired');
         }
 
         // Check if token is revoked
         if (refreshToken.revoked) {
-            throw 'Token has been revoked';
+            console.error('Refresh token has been revoked');
+            throw new Error('Token has been revoked');
         }
 
+        // Generate new refresh token
         const newRefreshToken = generateRefreshToken(account, ipAddress);
+        
+        // Revoke old refresh token
         refreshToken.revoked = Date.now();
         refreshToken.revokedByIp = ipAddress;
         refreshToken.replacedByToken = newRefreshToken.token;
+        
+        // Save changes
         await refreshToken.save();
         await newRefreshToken.save();
 
+        // Generate new JWT token
         const jwtToken = generateJwtToken(account);
 
+        console.log(`Successfully refreshed token for account ID: ${account.id}`);
+        
+        // Return new tokens and account details
         return {
             ...basicDetails(account),
             jwtToken,
             refreshToken: newRefreshToken.token
         };
     } catch (error) {
-        console.error('Refresh token error:', error);
-        throw 'Invalid token';
+        console.error('Refresh token error:', error.message || error);
+        throw error.message || 'Invalid token';
     }
 }
 
@@ -266,10 +312,11 @@ function generateJwtToken(account) {
         {
             sub: account.id,
             id: account.id,
-            role: account.role
+            role: account.role,
+            iat: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + (15 * 60) // 15 minutes
         },
-        config.secret,
-        { expiresIn: '15m' }
+        config.secret
     );
 }
 

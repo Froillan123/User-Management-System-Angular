@@ -47,16 +47,32 @@ export class AccountService {
       .pipe(
         map(account => {
           if (!account || !account.jwtToken) {
+            console.error('Invalid login response:', account);
             throw new Error('Invalid login response');
           }
+          
+          // Store the account info in memory and localStorage
           this.accountSubject.next(account);
           localStorage.setItem('account', JSON.stringify(account));
+          
+          // Log successful authentication
+          console.log('Authentication successful for user:', account.email);
+          
+          // Start the refresh token timer
           this.startRefreshTokenTimer();
+          
           return account;
         }),
         catchError(error => {
           console.error('Login failed:', error);
-          return throwError(() => error);
+          // Transform the error to a more user-friendly message
+          let errorMsg = 'Login failed';
+          if (error.error && error.error.message) {
+            errorMsg = error.error.message;
+          } else if (error.message) {
+            errorMsg = error.message;
+          }
+          return throwError(() => new Error(errorMsg));
         })
       );
   }
@@ -91,25 +107,38 @@ export class AccountService {
   refreshToken() {
     const refreshToken = this.accountValue?.refreshToken;
     if (!refreshToken) {
+      console.error('No refresh token available');
       this.cleanupAndRedirect();
       return new Observable();
     }
 
-    return this.http.post<any>(`${baseUrl}/refresh-token`, { token: refreshToken }, { withCredentials: true })
+    return this.http.post<any>(`${baseUrl}/refresh-token`, { refreshToken }, { 
+      withCredentials: true,
+      headers: new HttpHeaders({
+        'Content-Type': 'application/json'
+      })
+    })
       .pipe(
         map((account) => {
           if (!account || !account.jwtToken) {
+            console.error('Invalid refresh token response:', account);
             throw new Error('Invalid refresh token response');
           }
+          console.log('Token refreshed successfully');
+          
+          // Update stored account
           this.accountSubject.next(account);
           localStorage.setItem('account', JSON.stringify(account));
+          
+          // Restart the refresh timer
           this.startRefreshTokenTimer();
+          
           return account;
         }),
         catchError(error => {
           console.error('Token refresh failed:', error);
           this.cleanupAndRedirect();
-          return throwError(() => error);
+          return throwError(() => new Error('Session expired. Please login again.'));
         })
       );
   }

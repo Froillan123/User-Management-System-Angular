@@ -22,8 +22,10 @@ export class JwtInterceptor implements HttpInterceptor {
     const isRevokeTokenRequest = request.url.includes('/revoke-token');
     const isAuthenticateRequest = request.url.includes('/authenticate');
 
-    // Don't add token to refresh token, revoke token, or authenticate requests
+    // Don't add token to authentication-related requests
     if (isLoggedIn && isApiUrl && !isRefreshTokenRequest && !isRevokeTokenRequest && !isAuthenticateRequest) {
+      console.log(`Adding auth header to request: ${request.method} ${request.url}`);
+      
       request = request.clone({
         setHeaders: {
           'Content-Type': 'application/json',
@@ -36,8 +38,12 @@ export class JwtInterceptor implements HttpInterceptor {
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
         if (error.status === 401 && !isRefreshTokenRequest && !isRevokeTokenRequest && !isAuthenticateRequest) {
+          console.log('401 error detected, attempting token refresh');
           return this.handle401Error(request, next);
         }
+        
+        // Log the error and pass it on
+        console.error(`HTTP Error: ${error.status}`, error);
         return throwError(() => error);
       })
     );

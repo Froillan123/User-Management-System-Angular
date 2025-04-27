@@ -26,10 +26,24 @@ function authorize(roles = []) {
                 }
                 return null;
             }
-        }),
+        }).unless({ path: [
+            // Public routes that don't require authentication
+            '/accounts/authenticate',
+            '/accounts/refresh-token',
+            '/accounts/register',
+            '/accounts/verify-email',
+            '/accounts/forgot-password',
+            '/accounts/validate-reset-token',
+            '/accounts/reset-password'
+        ]}),
 
         // Authorization middleware
         async (req, res, next) => {
+            // Skip authorization for routes that don't require authentication
+            if (req.path.match(/^\/accounts\/(authenticate|refresh-token|register|verify-email|forgot-password|validate-reset-token|reset-password)/)) {
+                return next();
+            }
+
             try {
                 // Check if token was properly verified
                 if (!req.auth || !req.auth.id) {
