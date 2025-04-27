@@ -9,8 +9,6 @@ yarn-error.log
 .env.local
 .env.*.local
 
-# Config files with sensitive data
-config.json
 
 # IDE
 .idea/
