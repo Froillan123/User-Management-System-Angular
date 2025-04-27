@@ -15,7 +15,15 @@ function authorize(roles = []) {
             secret,
             algorithms: ['HS256'],
             credentialsRequired: true,
-            requestProperty: 'auth' // Store decoded token in req.auth
+            requestProperty: 'auth', // Store decoded token in req.auth
+            getToken: function fromHeaderOrQuerystring(req) {
+                if (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer') {
+                    return req.headers.authorization.split(' ')[1];
+                } else if (req.query && req.query.token) {
+                    return req.query.token;
+                }
+                return null;
+            }
         }),
 
         // Authorization middleware
