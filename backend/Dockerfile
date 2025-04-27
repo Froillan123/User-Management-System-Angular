@@ -17,14 +17,8 @@ RUN apk add --no-cache postgresql-client && \
     npm install nodemailer swagger-ui-express yamljs && \
     npm install --save-dev nodemon
 
-# Copy config.json first to ensure it exists
-COPY config.json ./
-
 # Bundle app source
 COPY . .
-
-# Create .env file if it doesn't exist
-RUN touch .env
 
 # Expose the port the app runs on
 EXPOSE 4000
