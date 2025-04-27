@@ -14,11 +14,22 @@ app.use(cookieParser());
 
 // CORS configuration
 app.use(cors({
-    origin: true, // Allow all origins
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
 }));
+
+// Set secure cookie options
+app.use((req, res, next) => {
+    res.cookie('refreshToken', req.cookies.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'none',
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+    next();
+});
 
 // api routes
 app.use('/accounts', require('./accounts/accounts.controller'));

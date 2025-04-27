@@ -56,30 +56,51 @@ async function authenticate({ email, password, ipAddress }) {
 }
 
 async function refreshToken({ token, ipAddress }) {
-    const refreshToken = await getRefreshToken(token);
-    const account = await refreshToken.getAccount();
+    try {
+        const refreshToken = await getRefreshToken(token);
+        if (!refreshToken) {
+            throw 'Invalid token';
+        }
 
-    const newRefreshToken = generateRefreshToken(account, ipAddress);
-    refreshToken.revoked = Date.now();
-    refreshToken.revokedByIp = ipAddress;
-    refreshToken.replacedByToken = newRefreshToken.token;
-    await refreshToken.save();
-    await newRefreshToken.save();
+        const account = await refreshToken.getAccount();
+        if (!account) {
+            throw 'Account not found';
+        }
 
-    const jwtToken = generateJwtToken(account);
+        const newRefreshToken = generateRefreshToken(account, ipAddress);
+        refreshToken.revoked = Date.now();
+        refreshToken.revokedByIp = ipAddress;
+        refreshToken.replacedByToken = newRefreshToken.token;
+        await refreshToken.save();
+        await newRefreshToken.save();
 
-    return {
-        ...basicDetails(account),
-        jwtToken,
-        refreshToken: newRefreshToken.token
-    };
+        const jwtToken = generateJwtToken(account);
+
+        return {
+            ...basicDetails(account),
+            jwtToken,
+            refreshToken: newRefreshToken.token
+        };
+    } catch (error) {
+        console.error('Refresh token error:', error);
+        throw 'Invalid token';
+    }
 }
 
 async function revokeToken({ token, ipAddress }) {
-    const refreshToken = await getRefreshToken(token);
-    refreshToken.revoked = Date.now();
-    refreshToken.revokedByIp = ipAddress;
-    await refreshToken.save();
+    try {
+        const refreshToken = await getRefreshToken(token);
+        if (!refreshToken) {
+            throw 'Invalid token';
+        }
+
+        refreshToken.revoked = Date.now();
+        refreshToken.revokedByIp = ipAddress;
+        await refreshToken.save();
+    } catch (error) {
+        console.error('Revoke token error:', error);
+        throw 'Invalid token';
+    }
 }
 
 async function register(params, origin) {
