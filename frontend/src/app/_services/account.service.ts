@@ -29,30 +29,43 @@ export class AccountService {
 
   private getHttpOptions() {
     const account = this.accountValue;
+    if (!account?.jwtToken) {
+      this.cleanupAndRedirect();
+      return {};
+    }
     return {
       headers: new HttpHeaders({
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${account?.jwtToken || ''}`
+        'Authorization': `Bearer ${account.jwtToken}`
       }),
       withCredentials: true
     };
   }
 
   login(email: string, password: string) {
-    return this.http.post<any>(`${baseUrl}/authenticate`, { email, password }, this.getHttpOptions())
-      .pipe(map(account => {
-        this.accountSubject.next(account);
-        localStorage.setItem('account', JSON.stringify(account));
-        this.startRefreshTokenTimer();
-        return account;
-      }));
+    return this.http.post<any>(`${baseUrl}/authenticate`, { email, password }, { withCredentials: true })
+      .pipe(
+        map(account => {
+          if (!account || !account.jwtToken) {
+            throw new Error('Invalid login response');
+          }
+          this.accountSubject.next(account);
+          localStorage.setItem('account', JSON.stringify(account));
+          this.startRefreshTokenTimer();
+          return account;
+        }),
+        catchError(error => {
+          console.error('Login failed:', error);
+          return throwError(() => error);
+        })
+      );
   }
 
   logout() {
     const refreshToken = this.accountValue?.refreshToken;
     if (refreshToken) {
       // First try to revoke the token
-      this.http.post<any>(`${baseUrl}/revoke-token`, { token: refreshToken }, this.getHttpOptions())
+      this.http.post<any>(`${baseUrl}/revoke-token`, { token: refreshToken }, { withCredentials: true })
         .subscribe({
           next: () => {
             this.cleanupAndRedirect();
@@ -82,7 +95,7 @@ export class AccountService {
       return new Observable();
     }
 
-    return this.http.post<any>(`${baseUrl}/refresh-token`, { token: refreshToken }, this.getHttpOptions())
+    return this.http.post<any>(`${baseUrl}/refresh-token`, { token: refreshToken }, { withCredentials: true })
       .pipe(
         map((account) => {
           if (!account || !account.jwtToken) {
@@ -102,56 +115,107 @@ export class AccountService {
   }
 
   register(account: Account) {
-    return this.http.post(`${baseUrl}/register`, account, this.getHttpOptions());
+    return this.http.post(`${baseUrl}/register`, account, { withCredentials: true });
   }
 
   verifyEmail(token: string) {
-    return this.http.post(`${baseUrl}/verify-email`, { token }, this.getHttpOptions());
+    return this.http.post(`${baseUrl}/verify-email`, { token }, { withCredentials: true });
   }
 
   forgotPassword(email: string) {
-    return this.http.post(`${baseUrl}/forgot-password`, { email }, this.getHttpOptions());
+    return this.http.post(`${baseUrl}/forgot-password`, { email }, { withCredentials: true });
   }
 
   validateResetToken(token: string) {
-    return this.http.post(`${baseUrl}/validate-reset-token`, { token }, this.getHttpOptions());
+    return this.http.post(`${baseUrl}/validate-reset-token`, { token }, { withCredentials: true });
   }
 
   resetPassword(token: string, password: string, confirmPassword: string) {
-    return this.http.post(`${baseUrl}/reset-password`, { token, password, confirmPassword }, this.getHttpOptions());
+    return this.http.post(`${baseUrl}/reset-password`, { token, password, confirmPassword }, { withCredentials: true });
   }
 
   getAll() {
-    return this.http.get<Account[]>(baseUrl, this.getHttpOptions());
+    const account = this.accountValue;
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${account?.jwtToken}`
+    });
+    
+    return this.http.get<Account[]>(baseUrl, { 
+      headers: headers,
+      withCredentials: true 
+    });
   }
 
   getById(id: string) {
-    return this.http.get<Account>(`${baseUrl}/${id}`, this.getHttpOptions());
+    const account = this.accountValue;
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${account?.jwtToken}`
+    });
+    
+    return this.http.get<Account>(`${baseUrl}/${id}`, { 
+      headers: headers,
+      withCredentials: true 
+    });
   }
 
   create(params) {
-    return this.http.post(baseUrl, params, this.getHttpOptions());
+    const account = this.accountValue;
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${account?.jwtToken}`
+    });
+    
+    return this.http.post(baseUrl, params, { 
+      headers: headers,
+      withCredentials: true 
+    });
   }
 
   update(id, params) {
-    return this.http.put(`${baseUrl}/${id}`, params, this.getHttpOptions())
-      .pipe(map((account: any) => {
-        if (account.id === this.accountValue?.id) {
-          account = { ...this.accountValue, ...account };
-          this.accountSubject.next(account);
-          localStorage.setItem('account', JSON.stringify(account));
+    const account = this.accountValue;
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${account?.jwtToken}`
+    });
+    
+    return this.http.put(`${baseUrl}/${id}`, params, {
+      headers: headers,
+      withCredentials: true
+    }).pipe(
+      map((updatedAccount: any) => {
+        if (updatedAccount.id === this.accountValue?.id) {
+          const mergedAccount = { ...this.accountValue, ...updatedAccount };
+          this.accountSubject.next(mergedAccount);
+          localStorage.setItem('account', JSON.stringify(mergedAccount));
         }
-        return account;
-      }));
+        return updatedAccount;
+      }),
+      catchError(error => {
+        console.error('Update failed:', error);
+        return throwError(() => error);
+      })
+    );
   }
 
   delete(id: string) {
-    return this.http.delete(`${baseUrl}/${id}`, this.getHttpOptions())
-      .pipe(finalize(() => {
+    const account = this.accountValue;
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${account?.jwtToken}`
+    });
+    
+    return this.http.delete(`${baseUrl}/${id}`, {
+      headers: headers,
+      withCredentials: true
+    }).pipe(
+      finalize(() => {
         if (id === this.accountValue?.id) {
           this.logout();
         }
-      }));
+      })
+    );
   }
 
   // helper methods

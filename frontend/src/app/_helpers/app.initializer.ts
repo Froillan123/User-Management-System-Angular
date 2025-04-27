@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
 import { environment } from '../../environments/environment';
-import { AccountService } from '../../app/_services';
+import { AccountService } from '../_services';
 
 @Injectable({ providedIn: 'root' })
 export class AppInitializer {
@@ -11,16 +11,25 @@ export class AppInitializer {
 
   initialize() {
     return new Promise<void>((resolve) => {
+      // Check if there's an account in local storage
       const account = this.accountService.accountValue;
+      
       if (account?.jwtToken) {
+        // Attempt to refresh the token
         this.accountService.refreshToken().subscribe({
-          next: () => resolve(),
-          error: () => {
+          next: () => {
+            console.log('Token refreshed successfully during app initialization');
+            resolve();
+          },
+          error: (error) => {
+            console.error('Token refresh failed during app initialization:', error);
+            // If token refresh fails, logout and redirect to login page
             this.accountService.logout();
             resolve();
           }
         });
       } else {
+        // No stored account, just resolve
         resolve();
       }
     });
