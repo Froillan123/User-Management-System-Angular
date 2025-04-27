@@ -17,7 +17,7 @@ RUN apk add --no-cache postgresql-client && \
     npm install nodemailer swagger-ui-express yamljs && \
     npm install --save-dev nodemon
 
-# Bundle app source
+# Copy the entire backend directory
 COPY . .
 
 # Expose the port the app runs on
