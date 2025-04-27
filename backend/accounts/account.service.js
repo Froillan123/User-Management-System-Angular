@@ -57,6 +57,10 @@ async function authenticate({ email, password, ipAddress }) {
 
 async function refreshToken({ token, ipAddress }) {
     try {
+        if (!token) {
+            throw 'Token is required';
+        }
+
         const refreshToken = await getRefreshToken(token);
         if (!refreshToken) {
             throw 'Invalid token';
@@ -65,6 +69,16 @@ async function refreshToken({ token, ipAddress }) {
         const account = await refreshToken.getAccount();
         if (!account) {
             throw 'Account not found';
+        }
+
+        // Check if token is expired
+        if (refreshToken.expires < new Date()) {
+            throw 'Token has expired';
+        }
+
+        // Check if token is revoked
+        if (refreshToken.revoked) {
+            throw 'Token has been revoked';
         }
 
         const newRefreshToken = generateRefreshToken(account, ipAddress);
@@ -89,6 +103,10 @@ async function refreshToken({ token, ipAddress }) {
 
 async function revokeToken({ token, ipAddress }) {
     try {
+        if (!token) {
+            throw 'Token is required';
+        }
+
         const refreshToken = await getRefreshToken(token);
         if (!refreshToken) {
             throw 'Invalid token';

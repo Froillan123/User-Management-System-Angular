@@ -22,12 +22,14 @@ app.use(cors({
 
 // Set secure cookie options
 app.use((req, res, next) => {
-    res.cookie('refreshToken', req.cookies.refreshToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'none',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+    if (req.cookies.refreshToken) {
+        res.cookie('refreshToken', req.cookies.refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'none',
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        });
+    }
     next();
 });
 

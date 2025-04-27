@@ -21,8 +21,8 @@ function authorize(roles = []) {
                     return req.headers.authorization.split(' ')[1];
                 } else if (req.query && req.query.token) {
                     return req.query.token;
-                } else if (req.cookies && req.cookies.token) {
-                    return req.cookies.token;
+                } else if (req.cookies && req.cookies.refreshToken) {
+                    return req.cookies.refreshToken;
                 }
                 return null;
             }
@@ -35,10 +35,16 @@ function authorize(roles = []) {
                 if (!req.auth || !req.auth.id) {
                     return res.status(401).json({ message: 'Invalid token' });
                 }
+
                 // Get account from database
                 const account = await db.Account.findByPk(req.auth.id);        
                 if (!account) {
                     return res.status(401).json({ message: 'Account not found' });
+                }
+
+                // Check if account is active
+                if (account.status !== 'Active') {
+                    return res.status(401).json({ message: 'Account is inactive' });
                 }
                 
                 // Check roles if specified
