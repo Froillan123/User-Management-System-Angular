@@ -12,6 +12,9 @@ RUN apk add --no-cache postgresql-client && \
     npm install && \
     npm install pg pg-hstore
 
+# Copy config.json first to ensure it exists
+COPY config.json ./
+
 # Bundle app source
 COPY . .
 
