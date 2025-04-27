@@ -7,13 +7,18 @@ WORKDIR /usr/src/app
 # Install app dependencies
 COPY package*.json ./
 
-# Install dependencies including PostgreSQL client
+# Install all dependencies
 RUN apk add --no-cache postgresql-client && \
     npm install && \
-    npm install pg pg-hstore
+    npm install express dotenv body-parser cookie-parser cors rootpath && \
+    npm install sequelize && \
+    npm install pg pg-hstore && \
+    npm install bcryptjs jsonwebtoken express-jwt joi && \
+    npm install nodemailer swagger-ui-express yamljs && \
+    npm install --save-dev nodemon
 
 # Copy config.json first to ensure it exists
-COPY config.json
+COPY config.json ./
 
 # Bundle app source
 COPY . .
