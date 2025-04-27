@@ -5,7 +5,6 @@ const app = express();
 const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
-app.use('/api-docs', require('./_helpers/swagger'));
 const errorHandler = require('./_middleware/error_handler');
 
 app.use(bodyParser.urlencoded({ extended: false }));
@@ -20,8 +19,9 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
 }));
 
-// Enable pre-flight requests for all routes
-app.options('*', cors({
+// Enable pre-flight requests for all routes using regex pattern instead of wildcard
+// This fixes the "Missing parameter name" error in Express 5
+app.options(/(.*)/, cors({
     origin: ['http://localhost:4200', 'https://user-management-system-angular.netlify.app'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -44,8 +44,11 @@ app.use((req, res, next) => {
 // api routes
 app.use('/accounts', require('./accounts/accounts.controller'));
 
-// swagger docs route
-app.use('/api-docs', require('./_helpers/swagger'));
+// Catch-all route for handling undefined routes - this uses a regexp directly instead of a string
+// Express 5 requires named parameters for wildcards
+app.use(/(.*)/, (req, res) => {
+    res.status(404).json({ message: 'Not Found' });
+});
 
 // global error handler
 app.use(errorHandler);
@@ -54,5 +57,4 @@ app.use(errorHandler);
 const port = process.env.NODE_ENV === 'production' ? (process.env.PORT || 80) : 4000;
 app.listen(port, () => {
     console.log('Server listening on port ' + port);
-    console.log('API Documentation available at /api-docs');
 });
