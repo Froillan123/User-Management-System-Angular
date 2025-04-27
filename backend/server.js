@@ -41,8 +41,36 @@ app.use((req, res, next) => {
     next();
 });
 
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`${req.method} ${req.url}`);
+  
+  // Log headers if this is an API request
+  if (req.url.includes('/accounts')) {
+    console.log('Headers:', JSON.stringify(req.headers));
+    
+    // Log Authorization header if present
+    if (req.headers.authorization) {
+      console.log(`Authorization: ${req.headers.authorization}`);
+    }
+  }
+  
+  next();
+});
+
 // api routes
 app.use('/accounts', require('./accounts/accounts.controller'));
+
+// Add a test endpoint
+app.get('/test', (req, res) => {
+  console.log('Test endpoint accessed');
+  res.json({ 
+    status: 'success', 
+    message: 'API is working correctly', 
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV || 'development'
+  });
+});
 
 // Catch-all route for handling undefined routes - this uses a regexp directly instead of a string
 // Express 5 requires named parameters for wildcards

@@ -25,11 +25,22 @@ export class JwtInterceptor implements HttpInterceptor {
     // Don't add token to authentication-related requests
     if (isLoggedIn && isApiUrl && !isRefreshTokenRequest && !isRevokeTokenRequest && !isAuthenticateRequest) {
       console.log(`Adding auth header to request: ${request.method} ${request.url}`);
+      console.log(`JWT token: ${account.jwtToken.substring(0, 20)}...`);
       
+      // Clone request with Authorization header
       request = request.clone({
         setHeaders: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${account.jwtToken}`
+        },
+        withCredentials: true
+      });
+    } else {
+      console.log(`Request without auth header: ${request.method} ${request.url}`);
+      // For requests that don't need auth header, still ensure content type is set
+      request = request.clone({
+        setHeaders: {
+          'Content-Type': 'application/json'
         },
         withCredentials: true
       });
@@ -54,28 +65,46 @@ export class JwtInterceptor implements HttpInterceptor {
       this.isRefreshing = true;
       this.refreshTokenSubject.next(null);
 
+      console.log('Refreshing access token...');
+      
+      // Try to refresh token
       return this.accountService.refreshToken().pipe(
         switchMap((account) => {
+          console.log('Token refresh successful, retrying original request');
           this.isRefreshing = false;
           this.refreshTokenSubject.next(account);
-          return next.handle(this.addTokenHeader(request, account.jwtToken));
+          
+          // Create a new request with the new token
+          const newRequest = this.addTokenHeader(request, account.jwtToken);
+          return next.handle(newRequest);
         }),
         catchError((err) => {
+          console.error('Token refresh failed, logging out user:', err);
           this.isRefreshing = false;
           this.accountService.logout();
-          return throwError(() => err);
+          return throwError(() => new Error('Session expired. Please login again.'));
         })
       );
     }
 
+    console.log('Waiting for token refresh to complete');
+    
+    // Wait for the token to be refreshed
     return this.refreshTokenSubject.pipe(
       filter(token => token != null),
       take(1),
-      switchMap(account => next.handle(this.addTokenHeader(request, account.jwtToken)))
+      switchMap(account => {
+        console.log('Using newly refreshed token for request');
+        const newRequest = this.addTokenHeader(request, account.jwtToken);
+        return next.handle(newRequest);
+      })
     );
   }
 
   private addTokenHeader(request: HttpRequest<any>, token: string) {
+    console.log(`Adding refreshed token to request: ${request.method} ${request.url}`);
+    console.log(`New JWT token: ${token.substring(0, 20)}...`);
+    
     return request.clone({
       setHeaders: {
         'Content-Type': 'application/json',

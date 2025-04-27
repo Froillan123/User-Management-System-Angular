@@ -181,19 +181,45 @@ function resetPassword(req, res, next) {
 }
 
 function getAll(req, res, next) {
+    console.log('GET /accounts - Fetching all accounts');
+    console.log('User:', req.user);
+
     accountService.getAll()
-        .then(accounts => res.json(accounts))
-        .catch(next);
+        .then(accounts => {
+            console.log(`Successfully retrieved ${accounts.length} accounts`);
+            res.json(accounts);
+        })
+        .catch(error => {
+            console.error('Error fetching accounts:', error);
+            next(error);
+        });
 }
 
 function getById(req, res, next) {
+    const id = req.params.id;
+    console.log(`GET /accounts/${id} - Fetching account by ID`);
+    console.log('Authenticated user:', req.user);
+    
     // users can get their own account and admins can get any account
-    if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin) {
+    if (Number(id) !== req.user.id && req.user.role !== Role.Admin) {
+        console.error(`Unauthorized access - User ${req.user.id} attempted to access account ${id}`);
         return res.status(401).json({ message: 'Unauthorized' });
     }
-    accountService.getById(req.params.id)
-        .then(account => account ? res.json(account) : res.sendStatus(404))
-        .catch(next);
+
+    accountService.getById(id)
+        .then(account => {
+            if (account) {
+                console.log(`Successfully retrieved account ${id}`);
+                res.json(account);
+            } else {
+                console.error(`Account ${id} not found`);
+                res.status(404).json({ message: 'Account not found' });
+            }
+        })
+        .catch(error => {
+            console.error(`Error fetching account ${id}:`, error);
+            next(error);
+        });
 }
 
 function createSchema(req, res, next) {
@@ -236,14 +262,26 @@ function updateSchema(req, res, next) {
 }
 
 function update(req, res, next) {
+    const id = req.params.id;
+    console.log(`PUT /accounts/${id} - Updating account`);
+    console.log('Request body:', req.body);
+    console.log('Authenticated user:', req.user);
+    
     // users can update their own account and admins can update any account
-    if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin) {
+    if (Number(id) !== req.user.id && req.user.role !== Role.Admin) {
+        console.error(`Unauthorized update - User ${req.user.id} attempted to update account ${id}`);
         return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    accountService.update(req.params.id, req.body)
-        .then(account => res.json(account))
-        .catch(next);
+    accountService.update(id, req.body)
+        .then(account => {
+            console.log(`Successfully updated account ${id}`);
+            res.json(account);
+        })
+        .catch(error => {
+            console.error(`Error updating account ${id}:`, error);
+            next(error);
+        });
 }
 
 function _delete(req, res, next) {

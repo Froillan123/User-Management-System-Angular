@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { BehaviorSubject, Observable, catchError, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, throwError, switchMap } from 'rxjs';
 import { map, finalize } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
@@ -203,27 +203,59 @@ export class AccountService {
   }
 
   update(id, params) {
+    console.log(`Updating account ID ${id} with params:`, params);
+    
     const account = this.accountValue;
+    if (!account || !account.jwtToken) {
+      console.error('No account or token available for update operation');
+      return throwError(() => new Error('Authentication required'));
+    }
+    
     const headers = new HttpHeaders({
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${account?.jwtToken}`
+      'Authorization': `Bearer ${account.jwtToken}`
     });
+    
+    console.log(`Using token for update: ${account.jwtToken.substring(0, 20)}...`);
     
     return this.http.put(`${baseUrl}/${id}`, params, {
       headers: headers,
       withCredentials: true
     }).pipe(
       map((updatedAccount: any) => {
+        console.log('Update successful, server response:', updatedAccount);
+        
+        // If updating the current user, update stored user data
         if (updatedAccount.id === this.accountValue?.id) {
           const mergedAccount = { ...this.accountValue, ...updatedAccount };
+          console.log('Updating current user data:', mergedAccount);
+          
           this.accountSubject.next(mergedAccount);
           localStorage.setItem('account', JSON.stringify(mergedAccount));
         }
+        
         return updatedAccount;
       }),
       catchError(error => {
         console.error('Update failed:', error);
-        return throwError(() => error);
+        let errorMsg = 'Update failed';
+        
+        if (error.status === 401) {
+          // Handle authentication error - try to refresh token
+          console.log('Authentication error during update, attempting refresh');
+          return this.refreshToken().pipe(
+            switchMap(() => this.update(id, params))
+          );
+        }
+        
+        // Transform the error to a more user-friendly message
+        if (error.error && error.error.message) {
+          errorMsg = error.error.message;
+        } else if (error.message) {
+          errorMsg = error.message;
+        }
+        
+        return throwError(() => new Error(errorMsg));
       })
     );
   }
