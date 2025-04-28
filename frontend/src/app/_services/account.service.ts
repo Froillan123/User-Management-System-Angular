@@ -215,8 +215,14 @@ export class AccountService {
     // Get the fallback refresh token if it exists
     const fallbackToken = localStorage.getItem('refreshToken');
     
-    // Prepare request body, include fallback token if available
-    const body = fallbackToken ? { refreshToken: fallbackToken } : {};
+    // Make sure we don't send "null" or "undefined" as strings
+    let body = {};
+    if (fallbackToken && fallbackToken !== 'null' && fallbackToken !== 'undefined') {
+      console.log('Using fallback token from localStorage');
+      body = { refreshToken: fallbackToken };
+    } else {
+      console.log('No fallback token available in localStorage');
+    }
     
     return this.http.post<any>(
       `${baseUrl}/refresh-token`, 

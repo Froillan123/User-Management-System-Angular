@@ -261,9 +261,29 @@ async function getAccount(id) {
 }
 
 async function getRefreshToken(token) {
-    const refreshToken = await db.RefreshToken.findOne({ where: { token } });
-    if (!refreshToken || !refreshToken.isActive) throw 'Invalid token';
-    return refreshToken;
+    if (!token || token === 'undefined') {
+        console.error('Invalid refresh token: token is undefined or null');
+        throw 'Invalid refresh token: token is missing';
+    }
+    
+    try {
+        const refreshToken = await db.RefreshToken.findOne({ where: { token } });
+        
+        if (!refreshToken) {
+            console.error(`No refresh token found in database for token: ${token.substring(0, 10)}...`);
+            throw 'Invalid token: token not found';
+        }
+        
+        if (!refreshToken.isActive) {
+            console.error(`Refresh token is inactive or expired: ${token.substring(0, 10)}...`);
+            throw 'Invalid token: token is inactive or expired';
+        }
+        
+        return refreshToken;
+    } catch (error) {
+        console.error('Error retrieving refresh token:', error);
+        throw 'Invalid token';
+    }
 }
 
 async function hash(password) {

@@ -5,6 +5,7 @@ const validateRequest = require('../_middleware/validate_request');
 const authorize = require('../_middleware/authorize');
 const Role = require('../_helpers/role');
 const accountService = require('./account.service');
+const db = require('../_helpers/db');
 
 // routes
 router.post('/authenticate', authenticateSchema, authenticate);
@@ -20,6 +21,9 @@ router.get('/:id', authorize(), getById);
 router.post('/', authorize(Role.Admin), createSchema, create);
 router.put('/:id', authorize(), updateSchema, update);
 router.delete('/:id', authorize(), _delete);
+// Debug routes
+router.get('/debug/tokens', authorize(), getActiveTokens);
+router.post('/debug/clear-tokens', authorize(), clearInactiveTokens);
 
 module.exports = router;
 
@@ -47,13 +51,30 @@ function authenticate(req, res, next) {
 }
 
 function refreshToken(req, res, next) {
-    // Get the token from cookies or request body (fallback)
-    const token = req.cookies.refreshToken || (req.body && req.body.refreshToken);
+    // Try to get token from cookie first, then from request body or query
+    let token = req.cookies?.refreshToken;
+    
+    // Check request body as a fallback
+    if (!token && req.body) {
+        token = req.body.refreshToken || req.body.token;
+    }
+    
+    // Last resort, check query params
+    if (!token && req.query) {
+        token = req.query.refreshToken || req.query.token;
+    }
+    
     const ipAddress = req.ip;
     
-    console.log(`Refresh token requested: Cookie present: ${!!req.cookies.refreshToken}, Body token present: ${!!(req.body && req.body.refreshToken)}`);
+    // Log detailed token info for debugging, but hide sensitive parts
+    console.log(`Refresh token request details:`);
+    console.log(`- Cookie present: ${!!req.cookies?.refreshToken}`);
+    console.log(`- Body token present: ${!!(req.body && (req.body.refreshToken || req.body.token))}`);
+    console.log(`- Query token present: ${!!(req.query && (req.query.refreshToken || req.query.token))}`);
+    console.log(`- Final token used: ${token ? 'Found' : 'Missing'}`);
     
-    if (!token) {
+    // Sanitize token - ensure it's not undefined, null, or "undefined" string
+    if (!token || token === 'undefined' || token === 'null') {
         return res.status(400).json({ message: 'Refresh token is required' });
     }
     
@@ -267,4 +288,56 @@ function setTokenCookie(res, token) {
         httpOnly: cookieOptions.httpOnly,
         path: cookieOptions.path
     })}`);
+}
+
+// Debug functions
+function getActiveTokens(req, res, next) {
+    // Only allow users to get their own tokens and admins to get any tokens
+    const id = parseInt(req.params.id || req.user.id);
+    if (id !== req.user.id && req.user.role !== Role.Admin) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    db.RefreshToken.findAll({
+        where: { 
+            accountId: id,
+            revoked: null,
+            expires: { [db.Sequelize.Op.gt]: new Date() }
+        },
+        attributes: ['id', 'created', 'expires', 'createdByIp']
+    })
+    .then(tokens => {
+        res.json({ 
+            activeTokenCount: tokens.length,
+            tokens: tokens.map(t => ({
+                id: t.id,
+                created: t.created,
+                expires: t.expires,
+                createdByIp: t.createdByIp,
+                expiresIn: Math.round((new Date(t.expires).getTime() - new Date().getTime()) / 1000 / 60) + ' minutes'
+            }))
+        });
+    })
+    .catch(next);
+}
+
+function clearInactiveTokens(req, res, next) {
+    // Only allow admins to clear tokens
+    if (req.user.role !== Role.Admin) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    // Find and delete all revoked or expired tokens
+    db.RefreshToken.destroy({
+        where: {
+            [db.Sequelize.Op.or]: [
+                { revoked: { [db.Sequelize.Op.ne]: null } },
+                { expires: { [db.Sequelize.Op.lt]: new Date() } }
+            ]
+        }
+    })
+    .then(count => {
+        res.json({ message: `${count} inactive tokens cleared` });
+    })
+    .catch(next);
 }
