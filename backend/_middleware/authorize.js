@@ -1,5 +1,5 @@
 const { expressjwt: jwt } = require("express-jwt");
-const secret = process.env.JWT_SECRET || 'your-super-secret-jwt-key';
+const { secret } = require('../config.json');
 const db = require('../_helpers/db');
 
 module.exports = authorize;
@@ -9,135 +9,30 @@ function authorize(roles = []) {
         roles = [roles];
     }
 
-    const jwtOptions = {
-        secret,
-        algorithms: ['HS256'],
-        credentialsRequired: true,
-        requestProperty: 'auth',
-        getToken: function fromHeaderOrQuerystring(req) {
-            const path = req.path || '';
-            
-            // Skip token validation for public routes
-            const publicRoutes = [
-                '/authenticate',
-                '/refresh-token',
-                '/register',
-                '/verify-email',
-                '/forgot-password',
-                '/validate-reset-token',
-                '/reset-password',
-                '/connection-test'
-            ];
-            
-            if (publicRoutes.some(route => path.includes(route))) {
-                console.log(`Public route accessed: ${path} - skipping token validation`);
-                return null;
-            }
-            
-            // Log authorization header for debugging
-            if (req.headers.authorization) {
-                console.log(`Authorization: ${req.headers.authorization}`);
-            }
-            
-            // Check Authorization header first (preferred method)
-            if (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer') {
-                const token = req.headers.authorization.split(' ')[1];
-                console.log(`Bearer token found: ${token.substring(0, 20)}...`);
-                return token;
-            } 
-            
-            // Check query parameter
-            if (req.query && req.query.token) {
-                console.log(`Query token found: ${req.query.token.substring(0, 20)}...`);
-                return req.query.token;
-            } 
-            
-            // Check cookies
-            if (req.cookies && req.cookies.refreshToken) {
-                console.log(`Cookie token found: ${req.cookies.refreshToken.substring(0, 20)}...`);
-                // For API routes, refreshToken cookie should only be used for refreshToken endpoint
-                if (path.includes('/refresh-token')) {
-                    return req.cookies.refreshToken;
-                }
-            }
-            
-            console.log('No token found in request');
-            return null;
-        }
-    };
-
     return [
         // JWT middleware with proper configuration
-        jwt(jwtOptions).unless({ 
-            path: [
-                // Public routes that don't require authentication
-                '/accounts/authenticate',
-                '/accounts/refresh-token',
-                '/accounts/register',
-                '/accounts/verify-email',
-                '/accounts/forgot-password',
-                '/accounts/validate-reset-token',
-                '/accounts/reset-password',
-                '/accounts/connection-test',
-                // Also allow OPTIONS requests for CORS preflight
-                { url: /(.*)/, methods: ['OPTIONS'] }
-            ]
+        jwt({
+            secret,
+            algorithms: ['HS256'],
+            credentialsRequired: true,
+            requestProperty: 'auth' // Store decoded token in req.auth
         }),
 
         // Authorization middleware
         async (req, res, next) => {
-            // Skip authorization for routes that don't require authentication
-            const publicRoutes = [
-                '/accounts/authenticate',
-                '/accounts/refresh-token',
-                '/accounts/register',
-                '/accounts/verify-email',
-                '/accounts/forgot-password',
-                '/accounts/validate-reset-token',
-                '/accounts/reset-password',
-                '/accounts/connection-test'
-            ];
-            
-            // Skip auth for OPTIONS requests (CORS preflight)
-            if (req.method === 'OPTIONS') {
-                console.log('OPTIONS request - skipping authorization');
-                return next();
-            }
-            
-            if (publicRoutes.some(route => req.path.includes(route))) {
-                console.log(`Public route accessed: ${req.path} - skipping authorization`);
-                return next();
-            }
-
             try {
-                console.log(`Authorization check for path: ${req.path}`);
-                console.log('Auth object:', JSON.stringify(req.auth || 'No auth object'));
-                
                 // Check if token was properly verified
                 if (!req.auth || !req.auth.id) {
-                    console.error('Invalid token - missing auth or id');
                     return res.status(401).json({ message: 'Invalid token' });
                 }
-
                 // Get account from database
-                const account = await db.Account.findByPk(req.auth.id);
+                const account = await db.Account.findByPk(req.auth.id);        
                 if (!account) {
-                    console.error(`Account not found for ID: ${req.auth.id}`);
                     return res.status(401).json({ message: 'Account not found' });
-                }
-
-                // Log successful account retrieval
-                console.log(`Account found: ${account.email} (ID: ${account.id}, Role: ${account.role})`);
-
-                // Check if account is active
-                if (account.status !== 'Active') {
-                    console.error(`Account is inactive: ${account.status}`);
-                    return res.status(401).json({ message: 'Account is inactive' });
                 }
                 
                 // Check roles if specified
                 if (roles.length && !roles.includes(account.role)) {
-                    console.error(`Insufficient permissions. Required: ${roles.join(', ')}, Account has: ${account.role}`);
                     return res.status(401).json({ message: 'Insufficient permissions' });
                 }
 
@@ -152,14 +47,9 @@ function authorize(roles = []) {
                     }
                 };
 
-                console.log(`Authorization successful for user ID: ${account.id}`);
                 next();
             } catch (err) {
-                console.error('Authorization error:', err);
-                return res.status(401).json({ 
-                    message: 'Authorization failed',
-                    error: err.message || 'Unknown error'
-                });
+                next(err);
             }
         }
     ];
