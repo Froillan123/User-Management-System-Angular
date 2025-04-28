@@ -1,19 +1,23 @@
 const nodemailer = require('nodemailer');
-const config = require('config.json');
+const config = require('../config.json');
+
+// Determine environment
+const env = process.env.NODE_ENV === 'production' ? 'production' : 'development';
+const envConfig = config[env];
 
 module.exports = sendEmail;
 
-async function sendEmail({ to, subject, html, from = process.env.EMAIL_FROM || config.emailFrom }) {
+async function sendEmail({ to, subject, html, from = process.env.EMAIL_FROM || envConfig.emailFrom }) {
     try {
         // Get SMTP options from environment variables or config file
         const smtpOptions = {
-            host: process.env.SMTP_HOST || config.smtpOptions.host,
-            port: process.env.SMTP_PORT || config.smtpOptions.port,
+            host: process.env.SMTP_HOST || envConfig.smtpOptions.host,
+            port: process.env.SMTP_PORT || envConfig.smtpOptions.port,
             secure: process.env.SMTP_SECURE === 'false' ? false : 
-                   (process.env.SMTP_SECURE === 'true' ? true : config.smtpOptions.secure),
+                   (process.env.SMTP_SECURE === 'true' ? true : envConfig.smtpOptions.secure),
             auth: {
-                user: process.env.SMTP_USER || config.smtpOptions.auth.user,
-                pass: process.env.SMTP_PASS || config.smtpOptions.auth.pass
+                user: process.env.SMTP_USER || envConfig.smtpOptions.auth.user,
+                pass: process.env.SMTP_PASS || envConfig.smtpOptions.auth.pass
             }
         };
 

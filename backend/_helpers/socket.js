@@ -1,18 +1,31 @@
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
-const config = require('config.json');
+const config = require('../config.json');
 const db = require('./db');
+
+// Determine environment
+const env = process.env.NODE_ENV === 'production' ? 'production' : 'development';
+const envConfig = config[env];
 
 let io;
 const connectedUsers = new Map(); // Map of userId -> socketId
+
+// Allowed origins based on environment
+const getAllowedOrigins = () => {
+    return process.env.NODE_ENV === 'production' 
+        ? [
+            'https://user-management-system-angular-tm8z.vercel.app',
+            'https://user-management-system-angular.vercel.app',
+            'https://user-management-system-angular-froillan123.vercel.app'
+          ]
+        : ['http://localhost:4200', 'http://localhost:3000', 'http://127.0.0.1:4200'];
+};
 
 module.exports = {
     init: (server) => {
         io = new Server(server, {
             cors: {
-                origin: process.env.NODE_ENV === 'production' 
-                    ? process.env.FRONTEND_URL 
-                    : 'http://localhost:4200',
+                origin: getAllowedOrigins(),
                 methods: ['GET', 'POST'],
                 credentials: true
             }
@@ -34,7 +47,7 @@ module.exports = {
 
                 try {
                     // Verify JWT token
-                    const decoded = jwt.verify(token, config.secret);
+                    const decoded = jwt.verify(token, envConfig.secret);
                     socket.userId = decoded.id;
                     
                     // Update user status

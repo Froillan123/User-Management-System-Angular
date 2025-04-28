@@ -1,4 +1,4 @@
-const config = require('config.json');
+const config = require('../config.json');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const crypto = require("crypto");
@@ -6,6 +6,13 @@ const { Op } = require('sequelize');
 const sendEmail = require('../_helpers/send_email');
 const db = require('../_helpers/db');
 const Role = require('../_helpers/role');
+
+// Determine environment
+const env = process.env.NODE_ENV === 'production' ? 'production' : 'development';
+const envConfig = config[env];
+
+// Log configuration
+console.log(`Using ${env} environment for account service`);
 
 module.exports = {
     authenticate,
@@ -291,13 +298,20 @@ async function hash(password) {
 }
 
 function generateJwtToken(account) {
+    // Log JWT secret access for debugging
+    console.log(`Generating JWT token with secret from ${env} environment`);
+    if (!envConfig.secret) {
+        console.error('JWT secret is missing or undefined!');
+        throw new Error('JWT secret configuration is missing');
+    }
+    
     return jwt.sign(
         {
             sub: account.id,
             id: account.id,
             role: account.role
         },
-        config.secret,
+        envConfig.secret,
         { expiresIn: '15m' }
     );
 }

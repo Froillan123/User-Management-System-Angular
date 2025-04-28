@@ -8,6 +8,18 @@ const cors = require('cors');
 const errorHandler = require('./_middleware/error_handler');
 const http = require('http');
 
+// Environment detection
+const isProduction = process.env.NODE_ENV === 'production';
+const port = isProduction ? (process.env.PORT || 80) : 4000;
+const allowedOrigins = [
+    'https://user-management-system-angular-tm8z.vercel.app',
+    'https://user-management-system-angular.vercel.app',
+    'https://user-management-system-angular-froillan123.vercel.app',
+    'http://localhost:4200',
+    'http://localhost:3000',
+    'http://127.0.0.1:4200'
+];
+
 // Parse JSON and URL-encoded data
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
@@ -25,16 +37,6 @@ app.use(cors({
         // Allow requests with no origin (like mobile apps, curl, etc)
         if (!origin) return callback(null, true);
         
-        // Define allowed origins
-        const allowedOrigins = [
-            'https://user-management-system-angular-tm8z.vercel.app',
-            'https://user-management-system-angular.vercel.app',
-            'https://user-management-system-angular-froillan123.vercel.app',
-            'http://localhost:4200',
-            'http://localhost:3000',
-            'http://127.0.0.1:4200'
-        ];
-        
         // Check if the origin is allowed
         if (allowedOrigins.includes(origin)) {
             callback(null, true);
@@ -51,15 +53,6 @@ app.use(cors({
 // Add additional headers to handle preflight requests
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Credentials', 'true');
-    
-    const allowedOrigins = [
-        'https://user-management-system-angular-tm8z.vercel.app',
-        'https://user-management-system-angular.vercel.app',
-        'https://user-management-system-angular-froillan123.vercel.app',
-        'http://localhost:4200',
-        'http://localhost:3000',
-        'http://127.0.0.1:4200'
-    ];
     
     const origin = req.headers.origin;
     if (allowedOrigins.includes(origin)) {
@@ -113,9 +106,6 @@ try {
     console.error('Error initializing Socket.IO:', error);
 }
 
-// Start server
-const port = process.env.NODE_ENV === 'production' ? (process.env.PORT || 80) : 4000;
-
 // Check for path-to-regexp version
 try {
     const pathToRegexp = require('path-to-regexp');
@@ -124,8 +114,10 @@ try {
     console.error('Could not determine path-to-regexp version:', error.message);
 }
 
-server.listen(port, () => {
-    console.log('Server listening on port ' + port);
-    console.log('API Documentation temporarily disabled');
-    console.log('WebSocket server initialized');
-});
+// Log environment information
+console.log(`Server running in ${isProduction ? 'PRODUCTION' : 'DEVELOPMENT'} mode`);
+console.log(`Server listening on port ${port}`);
+console.log(`API Documentation temporarily disabled`);
+console.log(`WebSocket server initialized`);
+
+server.listen(port);
