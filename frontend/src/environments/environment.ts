@@ -1,5 +1,5 @@
 export const environment = {
     production: false,
-    apiUrl: 'http://localhost:4000/accounts'
+    apiUrl: 'https://user-management-system-angular.onrender.com/accounts'
 };
 
