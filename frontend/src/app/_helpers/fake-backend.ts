@@ -9,9 +9,12 @@ import { Role } from '../../app/_models';
 const accountsKey = 'angular-10-signup-verification-boilerplate-accounts';
 let accounts = JSON.parse(localStorage.getItem(accountsKey) || '[]');
 
-// Patch old accounts in localStorage to ensure refreshTokens exist
+// Patch old accounts in localStorage to ensure refreshTokens exist and add online status
 accounts = accounts.map(acc => {
     if (!acc.refreshTokens) acc.refreshTokens = [];
+    if (acc.isOnline === undefined) acc.isOnline = Math.random() > 0.5;
+    if (acc.lastActive === undefined) acc.lastActive = new Date().toISOString();
+    if (acc.acceptTerms === undefined) acc.acceptTerms = true;
     return acc;
 });
 localStorage.setItem(accountsKey, JSON.stringify(accounts));
@@ -54,9 +57,92 @@ export class FakeBackendInterceptor implements HttpInterceptor {
                     return updateAccount();
                 case url.match(/\/accounts\/\d+$/) && method === 'DELETE':
                     return deleteAccount();
+                case url.endsWith('/analytics/user-stats') && method === 'GET':
+                    return getUserStats();
+                case url.endsWith('/analytics/online-users') && method === 'GET':
+                    return getOnlineUsers();
                 default:
                     return next.handle(request);
             }
+        }
+
+        // Analytics functions
+        function getUserStats() {
+            if (!isAuthorized(Role.Admin)) return unauthorized();
+            
+            // Get monthly registration data (simulated)
+            const monthlyData = generateMonthlyData();
+            
+            // Get user statistics
+            const totalUsers = accounts.length;
+            const activeUsers = accounts.filter(x => x.status === 'Active').length;
+            const verifiedUsers = accounts.filter(x => x.isVerified).length;
+            const onlineUsers = accounts.filter(x => x.isOnline).length;
+            const refreshTokenCount = accounts.reduce((count, account) => 
+                count + (account.refreshTokens ? account.refreshTokens.length : 0), 0);
+            
+            return ok({
+                totalUsers,
+                activeUsers,
+                verifiedUsers,
+                onlineUsers,
+                refreshTokenCount,
+                monthlyData
+            });
+        }
+
+        function getOnlineUsers() {
+            if (!isAuthorized(Role.Admin)) return unauthorized();
+            
+            // Update random online statuses for simulation
+            updateOnlineStatuses();
+            
+            // Return all users with their online status
+            return ok(accounts.map(x => ({
+                ...basicDetails(x),
+                isOnline: x.isOnline,
+                lastActive: x.lastActive
+            })));
+        }
+
+        function updateOnlineStatuses() {
+            // Update online status based on last active time
+            const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+            
+            accounts = accounts.map(account => {
+                const lastActive = account.lastActive ? new Date(account.lastActive) : null;
+                account.isOnline = lastActive && lastActive > fiveMinutesAgo;
+                return account;
+            });
+            
+            localStorage.setItem(accountsKey, JSON.stringify(accounts));
+        }
+
+        function generateMonthlyData() {
+            // Get all months in the current year
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const currentMonth = new Date().getMonth();
+            
+            // Initialize monthly counts
+            const monthlyCounts = months.map(month => ({
+                month,
+                count: 0,
+                isCurrent: false
+            }));
+            
+            // Count registrations by month
+            accounts.forEach(account => {
+                if (account.dateCreated) {
+                    const createdDate = new Date(account.dateCreated);
+                    const monthIndex = createdDate.getMonth();
+                    monthlyCounts[monthIndex].count++;
+                }
+            });
+            
+            // Mark current month
+            monthlyCounts[currentMonth].isCurrent = true;
+            
+            return monthlyCounts;
         }
 
         // role functions
@@ -83,6 +169,10 @@ export class FakeBackendInterceptor implements HttpInterceptor {
             }
             if (account.password !== password) return error('Password is incorrect');
 
+            // Set account to online
+            account.isOnline = true;
+            account.lastActive = new Date().toISOString();
+
             // add refresh token to account
             if (!account.refreshTokens) account.refreshTokens = [];
             account.refreshTokens.push(generateRefreshToken());
@@ -104,6 +194,9 @@ export class FakeBackendInterceptor implements HttpInterceptor {
 
             if (!account) return unauthorized();
 
+            // Update active status
+            account.lastActive = new Date().toISOString();
+
             // replace old refresh token with new one and save
             account.refreshTokens = account.refreshTokens.filter(x => x !== refreshToken);
             account.refreshTokens.push(generateRefreshToken());
@@ -123,6 +216,10 @@ export class FakeBackendInterceptor implements HttpInterceptor {
 
             if (!account) return unauthorized();
 
+            // Set account to offline when token is revoked (logout)
+            account.isOnline = false;
+            account.lastActive = new Date().toISOString();
+
             account.refreshTokens = account.refreshTokens.filter(x => x !== refreshToken);
             localStorage.setItem(accountsKey, JSON.stringify(accounts));
 
@@ -132,6 +229,7 @@ export class FakeBackendInterceptor implements HttpInterceptor {
         function register() {
             const account = body;
             account.refreshTokens = [];
+            account.dateCreated = new Date().toISOString();
             
             if (accounts.length === 0) {
                 // First user is Admin
@@ -142,12 +240,10 @@ export class FakeBackendInterceptor implements HttpInterceptor {
                 accounts.push(account);
                 localStorage.setItem(accountsKey, JSON.stringify(accounts));
                 
-                // Show simple success message for admin
                 setTimeout(() => {
                     alertService.success('Registration successful! You can now log in.', { autoClose: true });
                 }, 1000);
                 
-                // Return success message for first account
                 return ok({
                     message: 'Registration successful. You can now login.'
                 });
@@ -161,7 +257,6 @@ export class FakeBackendInterceptor implements HttpInterceptor {
                 accounts.push(account);
                 localStorage.setItem(accountsKey, JSON.stringify(accounts));
 
-                // Show verification email for regular users
                 setTimeout(() => {
                     const verifyUrl = `${location.origin}/account/verify-email?token=${account.verificationToken}`;
                     alertService.info(
@@ -296,8 +391,12 @@ export class FakeBackendInterceptor implements HttpInterceptor {
                 return error(`Email ${account.email} is already registered`);
             }
 
+            // Ensure acceptTerms is true when admin creates an account
+            account.acceptTerms = true;
             account.id = newAccountId();
             account.dateCreated = new Date().toISOString();
+            account.lastActive = new Date().toISOString();
+            account.isOnline = false;
             // Force all created accounts to be regular users
             account.role = Role.User;
             account.isVerified = true;
@@ -382,8 +481,8 @@ export class FakeBackendInterceptor implements HttpInterceptor {
         }
 
         function basicDetails(account) {
-            const { id, title, firstName, lastName, email, role, dateCreated, isVerified, status } = account;
-            return { id, title, firstName, lastName, email, role, dateCreated, isVerified, status };
+            const { id, title, firstName, lastName, email, role, dateCreated, isVerified, status, acceptTerms } = account;
+            return { id, title, firstName, lastName, email, role, dateCreated, isVerified, status, acceptTerms };
         }
 
         function isAuthenticated() {

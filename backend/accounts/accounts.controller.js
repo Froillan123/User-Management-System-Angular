@@ -96,7 +96,9 @@ function registerSchema(req, res, next) {
 
 function register(req, res, next) {
     accountService.register(req.body, req.get('origin'))
-        .then(result => res.json(result)) // ✅ Send full result including verificationToken
+        .then(result => {
+            res.json(result);
+        })
         .catch(next);
 }
 

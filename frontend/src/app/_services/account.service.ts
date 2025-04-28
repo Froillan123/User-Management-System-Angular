@@ -6,6 +6,7 @@ import { map, finalize } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
 import { Account } from '../../app/_models';
+import { SocketService } from './socket.service';
 
 const baseUrl = `${environment.apiUrl}`;
 
@@ -16,11 +17,20 @@ export class AccountService {
 
   constructor(
     private router: Router,
-    private http: HttpClient
+    private http: HttpClient,
+    private socketService: SocketService
   ) {
     const storedAccount = localStorage.getItem('account');
     this.accountSubject = new BehaviorSubject<Account | null>(storedAccount ? JSON.parse(storedAccount) : null);
     this.account = this.accountSubject.asObservable();
+    
+    // If we have an account, set the current user ID in the socket service
+    if (this.accountValue?.id) {
+      this.socketService.setCurrentUser(
+        this.accountValue.id.toString(),
+        this.accountValue.jwtToken || ''
+      );
+    }
   }
 
   public get accountValue(): Account | null {
@@ -70,6 +80,12 @@ export class AccountService {
         // Start the refresh token timer
         this.startRefreshTokenTimer();
         
+        // Set current user ID in socket service and connect
+        if (account.id) {
+          this.socketService.setCurrentUser(account.id, account.jwtToken);
+          this.socketService.connect();
+        }
+        
         return account;
       }),
       catchError(error => {
@@ -104,32 +120,72 @@ export class AccountService {
     } else {
       this.cleanupAndRedirect();
     }
+    
+    // Disconnect from socket
+    this.socketService.disconnect();
   }
 
   private cleanupAndRedirect() {
     this.stopRefreshTokenTimer();
     this.accountSubject.next(null);
     localStorage.removeItem('account');
+    
+    // Reset current user ID in socket service
+    this.socketService.setCurrentUser('', '');
+    
     this.router.navigate(['/account/login']);
   }
 
-  refreshToken() {
-    const refreshToken = this.accountValue?.refreshToken;
-    if (!refreshToken) {
-      console.error('No refresh token available');
-      this.cleanupAndRedirect();
-      return new Observable();
-    }
+  private refreshTokenTimeout: any;
 
+  private startRefreshTokenTimer() {
+    try {
+      // Parse the JWT token to get the expiration time
+      const jwtToken = this.accountValue?.jwtToken;
+      if (!jwtToken) {
+        console.error('No JWT token found when starting timer');
+        return;
+      }
+
+      // Get the token expiry time - 1 minute to ensure we refresh before it expires
+      const tokenParts = jwtToken.split('.');
+      if (tokenParts.length !== 3) {
+        console.error('Invalid JWT token format');
+        return;
+      }
+
+      try {
+        const tokenPayload = JSON.parse(atob(tokenParts[1]));
+        const expires = new Date(tokenPayload.exp * 1000);
+        const timeout = expires.getTime() - Date.now() - (60 * 1000); // Refresh 1 minute before expiry
+
+        // Set timeout to refresh the token
+        this.refreshTokenTimeout = setTimeout(() => {
+          console.log('Refreshing token automatically');
+          this.refreshToken().subscribe();
+        }, Math.max(1, timeout)); // Ensure positive timeout value
+        
+        console.log(`Token refresh scheduled in ${Math.round(timeout/1000)} seconds`);
+      } catch (error) {
+        console.error('Error parsing JWT token:', error);
+      }
+    } catch (error) {
+      console.error('Error in startRefreshTokenTimer:', error);
+    }
+  }
+
+  private stopRefreshTokenTimer() {
+    clearTimeout(this.refreshTokenTimeout);
+  }
+
+  refreshToken() {
+    console.log('Attempting to refresh token');
+    
+    // If no cookie is set, try to use the stored refreshToken
     return this.http.post<any>(
       `${baseUrl}/refresh-token`, 
-      { refreshToken }, 
-      { 
-        withCredentials: true,
-        headers: new HttpHeaders({
-          'Content-Type': 'application/json'
-        })
-      }
+      {}, // Empty body since the token is sent via cookie
+      { withCredentials: true }
     ).pipe(
       map((account) => {
         if (!account || !account.jwtToken) {
@@ -138,25 +194,57 @@ export class AccountService {
         }
         console.log('Token refreshed successfully');
         
-        // Update stored account
-        this.accountSubject.next(account);
-        localStorage.setItem('account', JSON.stringify(account));
+        // Update stored account with new token but preserve other data
+        const updatedAccount = {
+          ...this.accountValue, // Keep existing account data
+          ...account, // Update with new token and other returned fields
+        };
+        
+        this.accountSubject.next(updatedAccount);
+        localStorage.setItem('account', JSON.stringify(updatedAccount));
         
         // Restart the refresh timer
         this.startRefreshTokenTimer();
         
-        return account;
+        return updatedAccount;
       }),
       catchError(error => {
         console.error('Token refresh failed:', error);
-        this.cleanupAndRedirect();
+        
+        // Only cleanup and redirect if it's a true authentication error
+        if (error.status === 401) {
+          this.cleanupAndRedirect();
+        }
+        
         return throwError(() => new Error('Session expired. Please login again.'));
       })
     );
   }
 
   register(account: Account) {
-    return this.http.post(`${baseUrl}/register`, account, { withCredentials: true });
+    return this.http.post(`${baseUrl}/register`, account, { withCredentials: true })
+      .pipe(
+        catchError(error => {
+          console.error('Registration error:', error);
+          
+          let errorMsg = '';
+          
+          if (error.error && error.error.message) {
+            errorMsg = error.error.message;
+            // Check specifically for email already registered errors
+            if (errorMsg.toLowerCase().includes('email') && 
+                errorMsg.toLowerCase().includes('already registered')) {
+              errorMsg = `Email "${account.email}" is already registered`;
+            }
+          } else if (error.message) {
+            errorMsg = error.message;
+          } else {
+            errorMsg = 'Registration failed';
+          }
+          
+          return throwError(() => errorMsg);
+        })
+      );
   }
 
   verifyEmail(token: string) {
@@ -247,37 +335,16 @@ export class AccountService {
     );
   }
 
+  // Analytics methods
+  getUserStats() {
+    return this.http.get<any>(`${baseUrl}/analytics/user-stats`, this.getHttpOptions());
+  }
+
+  getOnlineUsers() {
+    return this.http.get<Account[]>(`${baseUrl}/analytics/online-users`, this.getHttpOptions());
+  }
+
   // helper methods
-
-  private refreshTokenTimeout: any;
-
-  private startRefreshTokenTimer() {
-    const account = this.accountValue;
-    if (!account?.jwtToken) {
-      this.logout();
-      return;
-    }
-
-    try {
-      const jwtToken = JSON.parse(atob(account.jwtToken.split('.')[1]));
-      const expires = new Date(jwtToken.exp * 1000);
-      const timeout = expires.getTime() - Date.now() - (60 * 1000);
-      
-      if (timeout <= 0) {
-        this.logout();
-        return;
-      }
-      
-      this.refreshTokenTimeout = setTimeout(() => this.refreshToken().subscribe(), timeout);
-    } catch (error) {
-      console.error('Error parsing JWT token:', error);
-      this.logout();
-    }
-  }
-
-  private stopRefreshTokenTimer() {
-    clearTimeout(this.refreshTokenTimeout);
-  }
 
   public testConnection(): Observable<any> {
     return this.http.get<any>(`${baseUrl}/connection-test`, this.getHttpOptions())

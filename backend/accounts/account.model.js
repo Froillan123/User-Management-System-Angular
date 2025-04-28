@@ -19,6 +19,8 @@ function model(sequelize) {
         created: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
         status: { type: DataTypes.ENUM('Active', 'Inactive'), allowNull: false, defaultValue: 'Inactive' },
         updated: { type: DataTypes.DATE },
+        isOnline: { type: DataTypes.BOOLEAN, defaultValue: false },
+        lastActive: { type: DataTypes.DATE },
         isVerified: {
             type: DataTypes.VIRTUAL,
             get() { return !!(this.verified || this.passwordReset); }

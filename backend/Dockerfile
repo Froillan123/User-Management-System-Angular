@@ -16,6 +16,7 @@ RUN apk add --no-cache postgresql-client && \
     npm install bcryptjs jsonwebtoken express-jwt joi && \
     npm install nodemailer swagger-ui-express yamljs && \
     npm install --save-dev nodemon
+    npm install socket.io --save
 
 # Copy the entire backend directory
 COPY . .

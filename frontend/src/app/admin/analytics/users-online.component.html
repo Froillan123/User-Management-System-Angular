@@ -1,0 +1,130 @@
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="mb-0 fw-light">
+                        <i class="fas fa-users text-primary me-2"></i>Online Users
+                    </h1>
+                    <p class="text-muted lead">Real-time monitoring of user activity</p>
+                </div>
+                <a routerLink=".." class="btn btn-outline-primary rounded-pill">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow border-0 rounded-4">
+                <div class="card-header py-3 bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">User Activity Status</h6>
+                    <div>
+                        <button class="btn btn-sm btn-primary rounded-pill" (click)="loadUsers()">
+                            <i class="fas fa-sync-alt me-1"></i> Refresh Data
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div *ngIf="loading" class="d-flex justify-content-center p-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                    
+                    <div *ngIf="!loading">
+                        <!-- Summary Stats Cards -->
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <div class="card bg-success bg-opacity-10 border-0 rounded-4">
+                                    <div class="card-body text-center py-4">
+                                        <div class="h2 mb-0">{{ getOnlineUsersCount() }}</div>
+                                        <div class="text-success">
+                                            <i class="fas fa-circle me-1"></i> Online Users
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-secondary bg-opacity-10 border-0 rounded-4">
+                                    <div class="card-body text-center py-4">
+                                        <div class="h2 mb-0">{{ getOfflineUsersCount() }}</div>
+                                        <div class="text-secondary">
+                                            <i class="fas fa-circle me-1"></i> <span class="text-white">Offline Users</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-primary bg-opacity-10 border-0 rounded-4">
+                                    <div class="card-body text-center py-4">
+                                        <div class="h2 mb-0">{{ getTotalUsersCount() }}</div>
+                                        <div class="text-primary">
+                                            <i class="fas fa-users me-1"></i> <span class="text-white">Total Users</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th>Status</th>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Role</th>
+                                        <th>Last Active</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr *ngFor="let account of accounts">
+                                        <td>
+                                            <span class="d-inline-block position-relative me-2 p-1" 
+                                                  [ngClass]="{'text-success': account.isOnline, 'text-secondary': !account.isOnline}">
+                                                <i class="fas fa-circle"></i>
+                                                <span class="position-absolute top-0 start-100 translate-middle" *ngIf="account.isOnline">
+                                                    <span class="badge bg-success rounded-pill">
+                                                        <i class="fas fa-wifi"></i>
+                                                    </span>
+                                                </span>
+                                            </span>
+                                            <span class="ms-1 fw-medium" [ngClass]="{'text-success': account.isOnline, 'text-secondary': !account.isOnline}">
+                                                {{ account.isOnline ? 'Online' : 'Offline' }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-circle bg-primary text-white me-2">
+                                                    {{ account.firstName.charAt(0) }}{{ account.lastName.charAt(0) }}
+                                                </div>
+                                                {{ account.title }} {{ account.firstName }} {{ account.lastName }}
+                                            </div>
+                                        </td>
+                                        <td>{{ account.email }}</td>
+                                        <td>
+                                            <span class="badge" 
+                                                [ngClass]="{'bg-danger': isAdminRole(account.role), 'bg-primary': isUserRole(account.role)}">
+                                                {{ account.role }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                {{ account.lastActive ? (account.lastActive | date:'medium') : 'Never' }}
+                                            </div>
+                                            <small class="text-muted" *ngIf="account.lastActive">
+                                                {{ account.isOnline ? 'Currently active' : 'Last seen: ' + (account.lastActive | date:'shortTime') }}
+                                            </small>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 

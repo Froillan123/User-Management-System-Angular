@@ -7,7 +7,11 @@ export interface Account {
   lastName: string;
   email: string;
   role: string;
-  jwtToken: string;
-  refreshToken: string;
+  jwtToken?: string;
+  refreshToken?: string;
   isVerified: boolean;
+  acceptTerms: boolean;
+  lastActive?: Date;
+  isOnline?: boolean;
+  status?: string;
 }

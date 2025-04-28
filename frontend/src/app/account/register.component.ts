@@ -57,7 +57,19 @@ export class RegisterComponent implements OnInit {
                     this.router.navigate(['../login'], { relativeTo: this.route });
                 },
                 error: error => {
-                    this.alertService.error(error);
+                    // Extract meaningful error message
+                    let errorMessage = typeof error === 'string' ? error : 'Registration failed';
+                    
+                    // Check if it's an email-related error and highlight the email field
+                    if (errorMessage.toLowerCase().includes('email') && 
+                        errorMessage.toLowerCase().includes('already registered')) {
+                        this.form.get('email')?.setErrors({ alreadyRegistered: true });
+                        // Don't show alert for email errors, as we're displaying inline
+                    } else {
+                        // Only show alert for non-email related errors
+                        this.alertService.error(errorMessage);
+                    }
+                    
                     this.loading = false;
                 }
             });

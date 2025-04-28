@@ -20,7 +20,8 @@ module.exports = {
     getById,
     create,
     update,
-    delete: _delete
+    delete: _delete,
+    getAllAccounts
 };
 
 async function authenticate({ email, password, ipAddress }) {
@@ -43,6 +44,17 @@ async function authenticate({ email, password, ipAddress }) {
         throw 'Password is incorrect';
     }
 
+    account.isOnline = true;
+    account.lastActive = new Date();
+    await account.save();
+
+    try {
+        const socketModule = require('../_helpers/socket');
+        socketModule.updateUserStatus(account.id, true);
+    } catch (error) {
+        console.error('Error broadcasting online status:', error);
+    }
+
     const jwtToken = generateJwtToken(account);
     const refreshToken = generateRefreshToken(account, ipAddress);
 
@@ -59,10 +71,15 @@ async function refreshToken({ token, ipAddress }) {
     const refreshToken = await getRefreshToken(token);
     const account = await refreshToken.getAccount();
 
+    account.isOnline = true;
+    account.lastActive = new Date();
+    await account.save();
+
     const newRefreshToken = generateRefreshToken(account, ipAddress);
     refreshToken.revoked = Date.now();
     refreshToken.revokedByIp = ipAddress;
     refreshToken.replacedByToken = newRefreshToken.token;
+    
     await refreshToken.save();
     await newRefreshToken.save();
 
@@ -77,6 +94,19 @@ async function refreshToken({ token, ipAddress }) {
 
 async function revokeToken({ token, ipAddress }) {
     const refreshToken = await getRefreshToken(token);
+    
+    const account = await refreshToken.getAccount();
+    account.isOnline = false;
+    account.lastActive = new Date();
+    await account.save();
+    
+    try {
+        const socketModule = require('../_helpers/socket');
+        socketModule.updateUserStatus(account.id, false);
+    } catch (error) {
+        console.error('Error broadcasting offline status:', error);
+    }
+    
     refreshToken.revoked = Date.now();
     refreshToken.revokedByIp = ipAddress;
     await refreshToken.save();
@@ -84,7 +114,7 @@ async function revokeToken({ token, ipAddress }) {
 
 async function register(params, origin) {
     if (await db.Account.findOne({ where: { email: params.email } })) {
-        return await sendAlreadyRegisteredEmail(params.email, origin);
+        throw 'Email "' + params.email + '" is already registered';
     }
 
     const account = new db.Account(params);
@@ -163,6 +193,10 @@ async function resetPassword({ token, password }) {
 async function getAll() {
     const accounts = await db.Account.findAll();
     return accounts.map(x => basicDetails(x));
+}
+
+async function getAllAccounts() {
+    return await db.Account.findAll();
 }
 
 async function getById(id) {
@@ -248,8 +282,8 @@ function randomTokenString() {
 }
 
 function basicDetails(account) {
-    const { id, title, firstName, lastName, email, role, status, created, updated, isVerified } = account;
-    return { id, title, firstName, lastName, email, role, status, created, updated, isVerified };
+    const { id, title, firstName, lastName, email, role, created, updated, status, isVerified, isOnline, lastActive } = account;
+    return { id, title, firstName, lastName, email, role, created, updated, status, isVerified, isOnline, lastActive };
 }
 
 async function sendVerificationEmail(account, origin) {

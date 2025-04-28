@@ -45,7 +45,8 @@ export class AddEditComponent implements OnInit {
             password: ['', passwordValidators],
             confirmPassword: ['', this.isAddMode ? Validators.required : Validators.nullValidator],
             role: [Role.User, Validators.required],
-            status: ['Active', this.isAdmin ? Validators.required : Validators.nullValidator]
+            status: ['Active', this.isAdmin ? Validators.required : Validators.nullValidator],
+            acceptTerms: [true, Validators.requiredTrue]
         }, {
             validator: MustMatch('password', 'confirmPassword')
         });

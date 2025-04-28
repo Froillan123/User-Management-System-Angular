@@ -21,6 +21,8 @@ cd frontend
 ## then NPM install 
 ```bash
 npm install
+npm install socket.io-client --
+npm install --save-dev @types/socket.io-client
 ```
 
 To start a local development server, run:
