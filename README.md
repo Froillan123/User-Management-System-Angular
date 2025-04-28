@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![User Management System](frontend/src/utilities/images/favico.png)
+![User Management System](frontend/src/assets/images/favico.png)
 
 A full-stack application for managing user accounts with advanced features and security.
 
@@ -80,8 +80,8 @@ A full-stack application for managing user accounts with advanced features and s
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/yourusername/groupK-fullstack-app.git
-   cd groupK-fullstack-app
+   git clone https://github.com/Froillan123/User-Management-System-Angular.git
+   cd User-Management-System-Angular
    ```
 
 2. **Backend Setup**
@@ -99,12 +99,12 @@ A full-stack application for managing user accounts with advanced features and s
      "secret": "your_jwt_secret",
      "emailFrom": "your_email@gmail.com",
      "smtpOptions": {
-       "host": "smtp.gmail.com",
+       "host": "smtp.gmail.com", 
        "port": 465,
        "secure": true,
        "auth": {
          "user": "your_email@gmail.com",
-         "pass": "your_app_password"
+         "pass": "your_app_password in gmail"
        }
      }
    }
@@ -124,26 +124,6 @@ A full-stack application for managing user accounts with advanced features and s
    cp backend/.env.example backend/.env
    ```
 
-2. Update the `.env` file with your values:
-   ```env
-   # Database Configuration
-   DATABASE_URL=postgresql://username:password@host:port/database_name
-
-   # JWT Configuration
-   JWT_SECRET=your_jwt_secret_key
-
-   # Email Configuration
-   SMTP_HOST=smtp.gmail.com
-   SMTP_PORT=465
-   SMTP_SECURE=true
-   SMTP_USER=your_email@gmail.com
-   SMTP_PASS=your_app_password
-   EMAIL_FROM=your_email@gmail.com
-
-   # Server Configuration
-   PORT=4000
-   NODE_ENV=development
-   ```
 
 ### Email Configuration
 1. Go to your Google Account settings
@@ -157,10 +137,9 @@ A full-stack application for managing user accounts with advanced features and s
 ### Database Configuration
 1. Create a PostgreSQL database
 2. Get your database connection URL
-3. Update the `DATABASE_URL` in your `.env` file
+
 
 ### Security Notes
-- Never commit the `.env` file to version control
 - Keep your JWT secret key secure and unique
 - Regularly rotate your email app password
 - Use strong database passwords
@@ -213,7 +192,7 @@ docker run -p 4000:4000 user-management-backend
   
   Full Stack Developer • Class of 2025
   
-  [![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/yourusername)
+  [![GitHub](https://github.com/Froillan123)
   [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/yourusername)
 </div>
 
