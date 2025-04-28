@@ -181,7 +181,6 @@ export class AccountService {
   refreshToken() {
     console.log('Attempting to refresh token');
     
-    // If no cookie is set, try to use the stored refreshToken
     return this.http.post<any>(
       `${baseUrl}/refresh-token`, 
       {}, // Empty body since the token is sent via cookie
@@ -203,6 +202,14 @@ export class AccountService {
         this.accountSubject.next(updatedAccount);
         localStorage.setItem('account', JSON.stringify(updatedAccount));
         
+        // Update socket service with new token
+        if (updatedAccount.id) {
+          this.socketService.setCurrentUser(
+            updatedAccount.id.toString(),
+            updatedAccount.jwtToken || ''
+          );
+        }
+        
         // Restart the refresh timer
         this.startRefreshTokenTimer();
         
@@ -212,7 +219,7 @@ export class AccountService {
         console.error('Token refresh failed:', error);
         
         // Only cleanup and redirect if it's a true authentication error
-        if (error.status === 401) {
+        if (error.status === 401 || error.status === 403) {
           this.cleanupAndRedirect();
         }
         

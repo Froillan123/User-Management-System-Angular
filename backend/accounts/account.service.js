@@ -68,28 +68,42 @@ async function authenticate({ email, password, ipAddress }) {
 }
 
 async function refreshToken({ token, ipAddress }) {
-    const refreshToken = await getRefreshToken(token);
-    const account = await refreshToken.getAccount();
+    if (!token) {
+        throw 'Refresh token is required';
+    }
 
-    account.isOnline = true;
-    account.lastActive = new Date();
-    await account.save();
+    try {
+        const refreshToken = await getRefreshToken(token);
+        const account = await refreshToken.getAccount();
 
-    const newRefreshToken = generateRefreshToken(account, ipAddress);
-    refreshToken.revoked = Date.now();
-    refreshToken.revokedByIp = ipAddress;
-    refreshToken.replacedByToken = newRefreshToken.token;
-    
-    await refreshToken.save();
-    await newRefreshToken.save();
+        // Verify account is still active
+        if (account.status !== 'Active') {
+            throw 'Account is inactive';
+        }
 
-    const jwtToken = generateJwtToken(account);
+        account.isOnline = true;
+        account.lastActive = new Date();
+        await account.save();
 
-    return {
-        ...basicDetails(account),
-        jwtToken,
-        refreshToken: newRefreshToken.token
-    };
+        const newRefreshToken = generateRefreshToken(account, ipAddress);
+        refreshToken.revoked = Date.now();
+        refreshToken.revokedByIp = ipAddress;
+        refreshToken.replacedByToken = newRefreshToken.token;
+        
+        await refreshToken.save();
+        await newRefreshToken.save();
+
+        const jwtToken = generateJwtToken(account);
+
+        return {
+            ...basicDetails(account),
+            jwtToken,
+            refreshToken: newRefreshToken.token
+        };
+    } catch (error) {
+        console.error('Refresh token error:', error);
+        throw 'Invalid token';
+    }
 }
 
 async function revokeToken({ token, ipAddress }) {
