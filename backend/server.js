@@ -8,8 +8,7 @@ const cors = require('cors');
 const errorHandler = require('./_middleware/error_handler');
 const http = require('http');
 
-app.use('/api-docs', require('./_helpers/swagger'));
-
+// Parse JSON and URL-encoded data
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(cookieParser());
@@ -77,14 +76,22 @@ app.options('*', (req, res) => {
     res.sendStatus(200);
 });
 
-// api routes
+// API routes
 app.use('/accounts', require('./accounts/accounts.controller'));
 app.use('/accounts/analytics', require('./accounts/analytics.controller'));
 
-// swagger docs route
-app.use('/api-docs', require('./_helpers/swagger'));
+// Swagger docs route - add after API routes
+try {
+    app.use('/api-docs', require('./_helpers/swagger'));
+    console.log('Swagger UI loaded successfully');
+} catch (error) {
+    console.error('Failed to load Swagger UI:', error);
+    app.use('/api-docs', (req, res) => {
+        res.status(500).send('API Documentation temporarily unavailable');
+    });
+}
 
-// global error handler
+// Global error handler
 app.use(errorHandler);
 
 // Create HTTP server
@@ -94,7 +101,7 @@ const server = http.createServer(app);
 const socketModule = require('./_helpers/socket');
 socketModule.init(server);
 
-// start server
+// Start server
 const port = process.env.NODE_ENV === 'production' ? (process.env.PORT || 80) : 4000;
 server.listen(port, () => {
     console.log('Server listening on port ' + port);
