@@ -1,13 +1,13 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { BehaviorSubject, Observable, catchError, throwError, switchMap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, throwError, switchMap, tap } from 'rxjs';
 import { map, finalize } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
 import { Account } from '../../app/_models';
 
-const baseUrl = `${environment.apiUrl}/accounts`;
+const baseUrl = `${environment.apiUrl}`;
 
 @Injectable({ providedIn: 'root' })
 export class AccountService {
@@ -43,38 +43,47 @@ export class AccountService {
   }
 
   login(email: string, password: string) {
-    return this.http.post<any>(`${baseUrl}/authenticate`, { email, password }, { withCredentials: true })
-      .pipe(
-        map(account => {
-          if (!account || !account.jwtToken) {
-            console.error('Invalid login response:', account);
-            throw new Error('Invalid login response');
-          }
-          
-          // Store the account info in memory and localStorage
-          this.accountSubject.next(account);
-          localStorage.setItem('account', JSON.stringify(account));
-          
-          // Log successful authentication
-          console.log('Authentication successful for user:', account.email);
-          
-          // Start the refresh token timer
-          this.startRefreshTokenTimer();
-          
-          return account;
-        }),
-        catchError(error => {
-          console.error('Login failed:', error);
-          // Transform the error to a more user-friendly message
-          let errorMsg = 'Login failed';
-          if (error.error && error.error.message) {
-            errorMsg = error.error.message;
-          } else if (error.message) {
-            errorMsg = error.message;
-          }
-          return throwError(() => new Error(errorMsg));
+    console.log(`Login attempt for ${email} to URL: ${baseUrl}/authenticate`);
+    return this.http.post<any>(
+      `${baseUrl}/authenticate`, 
+      { email, password }, 
+      { 
+        withCredentials: true,
+        headers: new HttpHeaders({
+          'Content-Type': 'application/json'
         })
-      );
+      }
+    ).pipe(
+      map(account => {
+        if (!account || !account.jwtToken) {
+          console.error('Invalid login response:', account);
+          throw new Error('Invalid login response');
+        }
+        
+        // Store the account info in memory and localStorage
+        this.accountSubject.next(account);
+        localStorage.setItem('account', JSON.stringify(account));
+        
+        // Log successful authentication
+        console.log('Authentication successful for user:', account.email);
+        
+        // Start the refresh token timer
+        this.startRefreshTokenTimer();
+        
+        return account;
+      }),
+      catchError(error => {
+        console.error('Login failed:', error);
+        // Transform the error to a more user-friendly message
+        let errorMsg = 'Login failed';
+        if (error.error && error.error.message) {
+          errorMsg = error.error.message;
+        } else if (error.message) {
+          errorMsg = error.message;
+        }
+        return throwError(() => new Error(errorMsg));
+      })
+    );
   }
 
   logout() {
@@ -112,35 +121,38 @@ export class AccountService {
       return new Observable();
     }
 
-    return this.http.post<any>(`${baseUrl}/refresh-token`, { refreshToken }, { 
-      withCredentials: true,
-      headers: new HttpHeaders({
-        'Content-Type': 'application/json'
-      })
-    })
-      .pipe(
-        map((account) => {
-          if (!account || !account.jwtToken) {
-            console.error('Invalid refresh token response:', account);
-            throw new Error('Invalid refresh token response');
-          }
-          console.log('Token refreshed successfully');
-          
-          // Update stored account
-          this.accountSubject.next(account);
-          localStorage.setItem('account', JSON.stringify(account));
-          
-          // Restart the refresh timer
-          this.startRefreshTokenTimer();
-          
-          return account;
-        }),
-        catchError(error => {
-          console.error('Token refresh failed:', error);
-          this.cleanupAndRedirect();
-          return throwError(() => new Error('Session expired. Please login again.'));
+    return this.http.post<any>(
+      `${baseUrl}/refresh-token`, 
+      { refreshToken }, 
+      { 
+        withCredentials: true,
+        headers: new HttpHeaders({
+          'Content-Type': 'application/json'
         })
-      );
+      }
+    ).pipe(
+      map((account) => {
+        if (!account || !account.jwtToken) {
+          console.error('Invalid refresh token response:', account);
+          throw new Error('Invalid refresh token response');
+        }
+        console.log('Token refreshed successfully');
+        
+        // Update stored account
+        this.accountSubject.next(account);
+        localStorage.setItem('account', JSON.stringify(account));
+        
+        // Restart the refresh timer
+        this.startRefreshTokenTimer();
+        
+        return account;
+      }),
+      catchError(error => {
+        console.error('Token refresh failed:', error);
+        this.cleanupAndRedirect();
+        return throwError(() => new Error('Session expired. Please login again.'));
+      })
+    );
   }
 
   register(account: Account) {
@@ -164,42 +176,15 @@ export class AccountService {
   }
 
   getAll() {
-    const account = this.accountValue;
-    const headers = new HttpHeaders({
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${account?.jwtToken}`
-    });
-    
-    return this.http.get<Account[]>(baseUrl, { 
-      headers: headers,
-      withCredentials: true 
-    });
+    return this.http.get<Account[]>(baseUrl, this.getHttpOptions());
   }
 
   getById(id: string) {
-    const account = this.accountValue;
-    const headers = new HttpHeaders({
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${account?.jwtToken}`
-    });
-    
-    return this.http.get<Account>(`${baseUrl}/${id}`, { 
-      headers: headers,
-      withCredentials: true 
-    });
+    return this.http.get<Account>(`${baseUrl}/${id}`, this.getHttpOptions());
   }
 
   create(params) {
-    const account = this.accountValue;
-    const headers = new HttpHeaders({
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${account?.jwtToken}`
-    });
-    
-    return this.http.post(baseUrl, params, { 
-      headers: headers,
-      withCredentials: true 
-    });
+    return this.http.post(baseUrl, params, this.getHttpOptions());
   }
 
   update(id, params) {
@@ -211,17 +196,9 @@ export class AccountService {
       return throwError(() => new Error('Authentication required'));
     }
     
-    const headers = new HttpHeaders({
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${account.jwtToken}`
-    });
-    
     console.log(`Using token for update: ${account.jwtToken.substring(0, 20)}...`);
     
-    return this.http.put(`${baseUrl}/${id}`, params, {
-      headers: headers,
-      withCredentials: true
-    }).pipe(
+    return this.http.put(`${baseUrl}/${id}`, params, this.getHttpOptions()).pipe(
       map((updatedAccount: any) => {
         console.log('Update successful, server response:', updatedAccount);
         
@@ -261,16 +238,7 @@ export class AccountService {
   }
 
   delete(id: string) {
-    const account = this.accountValue;
-    const headers = new HttpHeaders({
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${account?.jwtToken}`
-    });
-    
-    return this.http.delete(`${baseUrl}/${id}`, {
-      headers: headers,
-      withCredentials: true
-    }).pipe(
+    return this.http.delete(`${baseUrl}/${id}`, this.getHttpOptions()).pipe(
       finalize(() => {
         if (id === this.accountValue?.id) {
           this.logout();
@@ -309,5 +277,16 @@ export class AccountService {
 
   private stopRefreshTokenTimer() {
     clearTimeout(this.refreshTokenTimeout);
+  }
+
+  public testConnection(): Observable<any> {
+    return this.http.get<any>(`${baseUrl}/connection-test`, this.getHttpOptions())
+      .pipe(
+        tap(response => console.log('Connection test response:', response)),
+        catchError(error => {
+          console.error('Connection test failed:', error);
+          return throwError(() => error);
+        })
+      );
   }
 }

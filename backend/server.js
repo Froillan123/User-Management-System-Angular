@@ -13,7 +13,7 @@ app.use(cookieParser());
 
 // CORS configuration
 app.use(cors({
-    origin: ['http://localhost:4200', 'https://user-management-system-angular.netlify.app'],
+    origin: ['http://localhost:4200', 'https://user-management-system-angular.netlify.app', 'https://user-management-system-angular.onrender.com'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
@@ -22,7 +22,7 @@ app.use(cors({
 // Enable pre-flight requests for all routes using regex pattern instead of wildcard
 // This fixes the "Missing parameter name" error in Express 5
 app.options(/(.*)/, cors({
-    origin: ['http://localhost:4200', 'https://user-management-system-angular.netlify.app'],
+    origin: ['http://localhost:4200', 'https://user-management-system-angular.netlify.app', 'https://user-management-system-angular.onrender.com'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
@@ -68,7 +68,25 @@ app.get('/test', (req, res) => {
     status: 'success', 
     message: 'API is working correctly', 
     timestamp: new Date().toISOString(),
-    env: process.env.NODE_ENV || 'development'
+    env: process.env.NODE_ENV || 'development',
+    headers: req.headers,
+    cookies: req.cookies,
+    ip: req.ip
+  });
+});
+
+// Add connection test endpoint
+app.get('/connection-test', (req, res) => {
+  console.log('Connection test endpoint accessed');
+  const authHeader = req.headers.authorization || 'No Authorization header';
+  
+  res.json({
+    status: 'connected',
+    message: 'Connection test successful',
+    auth: authHeader.startsWith('Bearer ') ? 'Bearer token present' : 'No valid bearer token',
+    cookies: Object.keys(req.cookies).length > 0 ? 'Cookies present' : 'No cookies',
+    cors: 'CORS headers enabled',
+    timestamp: new Date().toISOString()
   });
 });
 

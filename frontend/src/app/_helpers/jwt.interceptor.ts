@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpRequest, HttpHandler, HttpEvent, HttpInterceptor, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError, BehaviorSubject } from 'rxjs';
-import { catchError, filter, take, switchMap } from 'rxjs/operators';
+import { catchError, filter, take, switchMap, finalize } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
 import { AccountService } from '../_services';
@@ -17,7 +17,7 @@ export class JwtInterceptor implements HttpInterceptor {
     // add auth header with jwt if account is logged in and request is to the api url
     const account = this.accountService.accountValue;
     const isLoggedIn = account?.jwtToken;
-    const isApiUrl = request.url.startsWith(environment.apiUrl);
+    const isApiUrl = request.url.includes('user-management-system-angular.onrender.com');
     const isRefreshTokenRequest = request.url.includes('/refresh-token');
     const isRevokeTokenRequest = request.url.includes('/revoke-token');
     const isAuthenticateRequest = request.url.includes('/authenticate');
@@ -48,14 +48,26 @@ export class JwtInterceptor implements HttpInterceptor {
 
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
-        if (error.status === 401 && !isRefreshTokenRequest && !isRevokeTokenRequest && !isAuthenticateRequest) {
-          console.log('401 error detected, attempting token refresh');
+        if ([401, 403].includes(error.status) && !isRefreshTokenRequest && !isRevokeTokenRequest && !isAuthenticateRequest) {
+          console.log(`${error.status} error detected, attempting token refresh`);
           return this.handle401Error(request, next);
         }
         
-        // Log the error and pass it on
-        console.error(`HTTP Error: ${error.status}`, error);
+        // Enhanced error logging
+        if (error.error instanceof ErrorEvent) {
+          // Client-side error
+          console.error(`Client-side error: ${error.error.message}`);
+        } else {
+          // Server-side error
+          console.error(`Server-side error: ${error.status} ${error.statusText}`);
+          console.error('Error details:', error.error);
+        }
+        
         return throwError(() => error);
+      }),
+      finalize(() => {
+        // Log when requests complete
+        console.log(`Request completed: ${request.method} ${request.url}`);
       })
     );
   }
@@ -83,6 +95,9 @@ export class JwtInterceptor implements HttpInterceptor {
           this.isRefreshing = false;
           this.accountService.logout();
           return throwError(() => new Error('Session expired. Please login again.'));
+        }),
+        finalize(() => {
+          this.isRefreshing = false;
         })
       );
     }

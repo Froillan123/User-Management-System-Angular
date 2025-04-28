@@ -1,0 +1,15 @@
+{
+  "/accounts": {
+    "target": "https://user-management-system-angular.onrender.com",
+    "secure": true,
+    "changeOrigin": true,
+    "logLevel": "debug",
+    "pathRewrite": {
+      "^/accounts": "/accounts"
+    },
+    "headers": {
+      "Connection": "keep-alive"
+    },
+    "cookieDomainRewrite": "localhost"
+  }
+} 

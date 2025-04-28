@@ -15,10 +15,31 @@ function authorize(roles = []) {
         credentialsRequired: true,
         requestProperty: 'auth',
         getToken: function fromHeaderOrQuerystring(req) {
-            // Log all available headers for debugging
-            console.log('Headers:', JSON.stringify(req.headers));
+            const path = req.path || '';
             
-            // Check Authorization header first
+            // Skip token validation for public routes
+            const publicRoutes = [
+                '/authenticate',
+                '/refresh-token',
+                '/register',
+                '/verify-email',
+                '/forgot-password',
+                '/validate-reset-token',
+                '/reset-password',
+                '/connection-test'
+            ];
+            
+            if (publicRoutes.some(route => path.includes(route))) {
+                console.log(`Public route accessed: ${path} - skipping token validation`);
+                return null;
+            }
+            
+            // Log authorization header for debugging
+            if (req.headers.authorization) {
+                console.log(`Authorization: ${req.headers.authorization}`);
+            }
+            
+            // Check Authorization header first (preferred method)
             if (req.headers.authorization && req.headers.authorization.split(' ')[0] === 'Bearer') {
                 const token = req.headers.authorization.split(' ')[1];
                 console.log(`Bearer token found: ${token.substring(0, 20)}...`);
@@ -34,7 +55,10 @@ function authorize(roles = []) {
             // Check cookies
             if (req.cookies && req.cookies.refreshToken) {
                 console.log(`Cookie token found: ${req.cookies.refreshToken.substring(0, 20)}...`);
-                return req.cookies.refreshToken;
+                // For API routes, refreshToken cookie should only be used for refreshToken endpoint
+                if (path.includes('/refresh-token')) {
+                    return req.cookies.refreshToken;
+                }
             }
             
             console.log('No token found in request');
@@ -53,7 +77,10 @@ function authorize(roles = []) {
                 '/accounts/verify-email',
                 '/accounts/forgot-password',
                 '/accounts/validate-reset-token',
-                '/accounts/reset-password'
+                '/accounts/reset-password',
+                '/accounts/connection-test',
+                // Also allow OPTIONS requests for CORS preflight
+                { url: /(.*)/, methods: ['OPTIONS'] }
             ]
         }),
 
@@ -67,11 +94,18 @@ function authorize(roles = []) {
                 '/accounts/verify-email',
                 '/accounts/forgot-password',
                 '/accounts/validate-reset-token',
-                '/accounts/reset-password'
+                '/accounts/reset-password',
+                '/accounts/connection-test'
             ];
             
+            // Skip auth for OPTIONS requests (CORS preflight)
+            if (req.method === 'OPTIONS') {
+                console.log('OPTIONS request - skipping authorization');
+                return next();
+            }
+            
             if (publicRoutes.some(route => req.path.includes(route))) {
-                console.log(`Public route accessed: ${req.path}`);
+                console.log(`Public route accessed: ${req.path} - skipping authorization`);
                 return next();
             }
 

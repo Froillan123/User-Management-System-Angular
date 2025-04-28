@@ -298,19 +298,19 @@ function _delete(req, res, next) {
 // helper functions
 
 function setTokenCookie(res, token) {
-    // Create cookie with refresh token that expires in 7 days
+    // Create cookie options with proper security settings
     const cookieOptions = {
         httpOnly: true,
-        expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict'
+        expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        sameSite: 'none',
+        secure: process.env.NODE_ENV === 'production'
     };
     
-    console.log('Setting refresh token cookie with options:', {
+    console.log(`Setting refresh token cookie with options: ${JSON.stringify({
         secure: cookieOptions.secure,
         sameSite: cookieOptions.sameSite,
         expiresIn: '7 days'
-    });
+    })}`);
     
     res.cookie('refreshToken', token, cookieOptions);
 }
