@@ -21,6 +21,7 @@ export class JwtInterceptor implements HttpInterceptor {
     // Check if request is to any of our API endpoints
     const isApiUrl = request.url.includes(environment.apiUrl) || 
                     request.url.includes('user-management-system-angular.onrender.com') ||
+                    request.url.includes('user-management-system-angular-tm8z.vercel.app') ||
                     request.url.includes('localhost:4000');
                     
     const isRefreshTokenRequest = request.url.includes('/refresh-token');

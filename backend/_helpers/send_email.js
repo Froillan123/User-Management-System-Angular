@@ -3,9 +3,29 @@ const config = require('config.json');
 
 module.exports = sendEmail;
 
-async function sendEmail({ to, subject, html, from = config.emailFrom }) {
+async function sendEmail({ to, subject, html, from = process.env.EMAIL_FROM || config.emailFrom }) {
     try {
-        const transporter = nodemailer.createTransport(config.smtpOptions);
+        // Get SMTP options from environment variables or config file
+        const smtpOptions = {
+            host: process.env.SMTP_HOST || config.smtpOptions.host,
+            port: process.env.SMTP_PORT || config.smtpOptions.port,
+            secure: process.env.SMTP_SECURE === 'false' ? false : 
+                   (process.env.SMTP_SECURE === 'true' ? true : config.smtpOptions.secure),
+            auth: {
+                user: process.env.SMTP_USER || config.smtpOptions.auth.user,
+                pass: process.env.SMTP_PASS || config.smtpOptions.auth.pass
+            }
+        };
+
+        // Log SMTP configuration (without password)
+        console.log('Using SMTP configuration:', {
+            host: smtpOptions.host,
+            port: smtpOptions.port,
+            secure: smtpOptions.secure,
+            auth: { user: smtpOptions.auth.user, pass: '******' }
+        });
+
+        const transporter = nodemailer.createTransport(smtpOptions);
         
         // Verify connection configuration
         await transporter.verify();
@@ -55,6 +75,8 @@ async function sendEmail({ to, subject, html, from = config.emailFrom }) {
         return result;
     } catch (error) {
         console.error('Error sending email:', error);
-        throw error;
+        // Don't throw the error - just log it so the app doesn't crash
+        // This allows registration to continue even if email sending fails
+        return { error: error.message, messageId: null, success: false };
     }
 }

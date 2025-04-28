@@ -22,7 +22,12 @@ app.use(cors({
         
         // Define allowed origins
         const allowedOrigins = process.env.NODE_ENV === 'production'
-            ? [process.env.FRONTEND_URL, 'https://user-management-system-angular.vercel.app']
+            ? [
+                process.env.FRONTEND_URL,
+                'https://user-management-system-angular.vercel.app',
+                'https://user-management-system-angular-tm8z.vercel.app',
+                'https://user-management-system-angular-froillan123.vercel.app'
+              ]
             : ['http://localhost:4200', 'http://localhost:3000', 'http://127.0.0.1:4200'];
         
         // Check if the origin is allowed
