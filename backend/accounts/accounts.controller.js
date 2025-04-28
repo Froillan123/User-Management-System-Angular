@@ -47,14 +47,25 @@ function authenticate(req, res, next) {
 }
 
 function refreshToken(req, res, next) {
-    const token = req.cookies.refreshToken;
+    // Get the token from cookies or request body (fallback)
+    const token = req.cookies.refreshToken || (req.body && req.body.refreshToken);
     const ipAddress = req.ip;
+    
+    console.log(`Refresh token requested: Cookie present: ${!!req.cookies.refreshToken}, Body token present: ${!!(req.body && req.body.refreshToken)}`);
+    
+    if (!token) {
+        return res.status(400).json({ message: 'Refresh token is required' });
+    }
+    
     accountService.refreshToken({ token, ipAddress })
         .then(({ refreshToken, ...account }) => {
             setTokenCookie(res, refreshToken);
             res.json(account);
         })
-        .catch(next);
+        .catch(err => {
+            console.error('Refresh token error:', err);
+            next(err);
+        });
 }
 
 function revokeTokenSchema(req, res, next) {
@@ -237,11 +248,23 @@ function _delete(req, res, next) {
 
 function setTokenCookie(res, token) {
     // create cookie with refresh token that expires in 7 days
+    const isProduction = process.env.NODE_ENV === 'production';
     const cookieOptions = {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Must be 'none' to support cross-site delivery
-        expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        secure: isProduction,
+        sameSite: isProduction ? 'none' : 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+        path: '/'
     };
+
+    // Set the cookie
     res.cookie('refreshToken', token, cookieOptions);
+    
+    // For debugging
+    console.log(`Setting refreshToken cookie with options: ${JSON.stringify({
+        secure: cookieOptions.secure,
+        sameSite: cookieOptions.sameSite,
+        httpOnly: cookieOptions.httpOnly,
+        path: cookieOptions.path
+    })}`);
 }

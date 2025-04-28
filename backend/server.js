@@ -16,10 +16,26 @@ app.use(cookieParser());
 
 // CORS configuration
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production' 
-        ? process.env.FRONTEND_URL 
-        : 'http://localhost:4200',
-    credentials: true
+    origin: function(origin, callback) {
+        // Allow requests with no origin (like mobile apps, curl, etc)
+        if (!origin) return callback(null, true);
+        
+        // Define allowed origins
+        const allowedOrigins = process.env.NODE_ENV === 'production'
+            ? [process.env.FRONTEND_URL, 'https://user-management-system-angular.vercel.app']
+            : ['http://localhost:4200', 'http://localhost:3000', 'http://127.0.0.1:4200'];
+        
+        // Check if the origin is allowed
+        if (allowedOrigins.indexOf(origin) === -1) {
+            console.log(`CORS blocked request from: ${origin}`);
+            return callback(new Error('CORS policy: Origin not allowed'), false);
+        }
+        
+        return callback(null, true);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // api routes

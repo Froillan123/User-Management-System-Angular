@@ -12,10 +12,16 @@ export class ErrorInterceptor implements HttpInterceptor {
     intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
         return next.handle(request).pipe(
             catchError((error: HttpErrorResponse) => {
+                // Check if the request is a refresh token request
+                const isRefreshTokenRequest = request.url.includes('/refresh-token');
+                const isAuthRequest = request.url.includes('/authenticate');
+                
                 if ([401, 403].includes(error.status)) {
-                    // If the error is due to authentication/authorization
-                    if (error.status === 401 && !request.url.includes('authenticate')) {
-                        // Auto logout if 401 response returned from api and not a login request
+                    // Auto logout if 401/403 response but not for:
+                    // 1. login/authentication requests
+                    // 2. refresh token requests - JWT interceptor handles these
+                    if (error.status === 401 && !isAuthRequest && !isRefreshTokenRequest) {
+                        console.log('401 error for non-auth request, logging out');
                         this.accountService.logout();
                     }
 

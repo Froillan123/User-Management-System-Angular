@@ -17,7 +17,12 @@ export class JwtInterceptor implements HttpInterceptor {
     // add auth header with jwt if account is logged in and request is to the api url
     const account = this.accountService.accountValue;
     const isLoggedIn = account?.jwtToken;
-    const isApiUrl = request.url.includes('user-management-system-angular.onrender.com');
+    
+    // Check if request is to any of our API endpoints
+    const isApiUrl = request.url.includes(environment.apiUrl) || 
+                    request.url.includes('user-management-system-angular.onrender.com') ||
+                    request.url.includes('localhost:4000');
+                    
     const isRefreshTokenRequest = request.url.includes('/refresh-token');
     const isRevokeTokenRequest = request.url.includes('/revoke-token');
     const isAuthenticateRequest = request.url.includes('/authenticate');
@@ -25,7 +30,6 @@ export class JwtInterceptor implements HttpInterceptor {
     // Don't add token to authentication-related requests
     if (isLoggedIn && isApiUrl && !isRefreshTokenRequest && !isRevokeTokenRequest && !isAuthenticateRequest) {
       console.log(`Adding auth header to request: ${request.method} ${request.url}`);
-      console.log(`JWT token: ${account.jwtToken.substring(0, 20)}...`);
       
       // Clone request with Authorization header
       request = request.clone({
@@ -36,14 +40,13 @@ export class JwtInterceptor implements HttpInterceptor {
         withCredentials: true
       });
     } else {
-      console.log(`Request without auth header: ${request.method} ${request.url}`);
-      // For requests that don't need auth header, still ensure content type is set
-      request = request.clone({
-        setHeaders: {
-          'Content-Type': 'application/json'
-        },
-        withCredentials: true
-      });
+      // Always ensure all API requests include credentials
+      if (isApiUrl) {
+        console.log(`Request without auth header but with credentials: ${request.method} ${request.url}`);
+        request = request.clone({
+          withCredentials: true
+        });
+      }
     }
 
     return next.handle(request).pipe(

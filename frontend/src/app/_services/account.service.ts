@@ -30,6 +30,12 @@ export class AccountService {
         this.accountValue.id.toString(),
         this.accountValue.jwtToken || ''
       );
+      
+      // Start refresh token timer
+      this.startRefreshTokenTimer();
+      
+      // Verify authentication on startup
+      this.verifyAuth();
     }
   }
 
@@ -73,6 +79,10 @@ export class AccountService {
         // Store the account info in memory and localStorage
         this.accountSubject.next(account);
         localStorage.setItem('account', JSON.stringify(account));
+        
+        // Also store refresh token in localStorage as a fallback
+        // This will be used if the cookie mechanism fails
+        localStorage.setItem('refreshToken', account.refreshToken);
         
         // Log successful authentication
         console.log('Authentication successful for user:', account.email);
@@ -129,6 +139,7 @@ export class AccountService {
     this.stopRefreshTokenTimer();
     this.accountSubject.next(null);
     localStorage.removeItem('account');
+    localStorage.removeItem('refreshToken'); // Also remove fallback refresh token
     
     // Reset current user ID in socket service
     this.socketService.setCurrentUser('', '');
@@ -147,7 +158,7 @@ export class AccountService {
         return;
       }
 
-      // Get the token expiry time - 1 minute to ensure we refresh before it expires
+      // Get the token expiry time - 2 minutes to ensure we refresh before it expires
       const tokenParts = jwtToken.split('.');
       if (tokenParts.length !== 3) {
         console.error('Invalid JWT token format');
@@ -157,17 +168,37 @@ export class AccountService {
       try {
         const tokenPayload = JSON.parse(atob(tokenParts[1]));
         const expires = new Date(tokenPayload.exp * 1000);
-        const timeout = expires.getTime() - Date.now() - (60 * 1000); // Refresh 1 minute before expiry
+        const currentTime = new Date();
+        
+        // Calculate timeout
+        let timeout = expires.getTime() - currentTime.getTime() - (120 * 1000); // Refresh 2 minutes before expiry
+        
+        // If the timeout is negative or too large, use a sensible default
+        if (timeout < 0 || timeout > 14 * 60 * 1000) { // If negative or more than 14 minutes
+          console.warn('Token expiry calculation issue, using default 10 minute refresh');
+          timeout = 10 * 60 * 1000; // 10 minutes
+        }
 
         // Set timeout to refresh the token
         this.refreshTokenTimeout = setTimeout(() => {
           console.log('Refreshing token automatically');
-          this.refreshToken().subscribe();
-        }, Math.max(1, timeout)); // Ensure positive timeout value
+          this.refreshToken().subscribe({
+            error: err => {
+              console.error('Auto-refresh failed, will retry soon:', err);
+              // If refresh fails, try again in 30 seconds
+              setTimeout(() => this.refreshToken().subscribe(), 30000);
+            }
+          });
+        }, Math.max(1000, timeout)); // Ensure minimum timeout of 1 second
         
-        console.log(`Token refresh scheduled in ${Math.round(timeout/1000)} seconds`);
+        console.log(`Token refresh scheduled in ${Math.round(timeout/1000)} seconds (at ${new Date(currentTime.getTime() + timeout).toLocaleTimeString()})`);
       } catch (error) {
         console.error('Error parsing JWT token:', error);
+        // Set a default timeout
+        this.refreshTokenTimeout = setTimeout(() => {
+          console.log('Using fallback refresh timer');
+          this.refreshToken().subscribe();
+        }, 10 * 60 * 1000); // 10 minutes
       }
     } catch (error) {
       console.error('Error in startRefreshTokenTimer:', error);
@@ -181,9 +212,15 @@ export class AccountService {
   refreshToken() {
     console.log('Attempting to refresh token');
     
+    // Get the fallback refresh token if it exists
+    const fallbackToken = localStorage.getItem('refreshToken');
+    
+    // Prepare request body, include fallback token if available
+    const body = fallbackToken ? { refreshToken: fallbackToken } : {};
+    
     return this.http.post<any>(
       `${baseUrl}/refresh-token`, 
-      {}, // Empty body since the token is sent via cookie
+      body, 
       { withCredentials: true }
     ).pipe(
       map((account) => {
@@ -192,6 +229,11 @@ export class AccountService {
           throw new Error('Invalid refresh token response');
         }
         console.log('Token refreshed successfully');
+        
+        // Store the new refresh token as fallback
+        if (account.refreshToken) {
+          localStorage.setItem('refreshToken', account.refreshToken);
+        }
         
         // Update stored account with new token but preserve other data
         const updatedAccount = {
@@ -362,5 +404,26 @@ export class AccountService {
           return throwError(() => error);
         })
       );
+  }
+
+  // Verify authentication status - useful for page refresh
+  verifyAuth() {
+    // If we have an account stored, try to refresh the token
+    if (this.accountValue && this.accountValue.jwtToken) {
+      console.log('Verifying authentication status on page load/refresh');
+      this.refreshToken().subscribe({
+        next: () => {
+          console.log('Authentication verified successfully');
+          // No need to do anything else here, the token is refreshed
+        },
+        error: (error) => {
+          console.error('Authentication verification failed:', error);
+          // Only clean up if truly invalid, not for network errors
+          if (error.status === 401 || error.status === 403) {
+            this.cleanupAndRedirect();
+          }
+        }
+      });
+    }
   }
 }
