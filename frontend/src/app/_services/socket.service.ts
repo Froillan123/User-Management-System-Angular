@@ -55,14 +55,21 @@ export class SocketService {
     
     console.log('Socket connecting...');
     
-    // Connect to the WebSocket server
-    this.socket = io(environment.apiUrl.replace('/accounts', ''), {
+    // Connect to the WebSocket server using the environment URL
+    const socketUrl = environment.wsUrl || environment.apiUrl.replace('/accounts', '');
+    console.log(`Connecting to WebSocket server at: ${socketUrl}`);
+    
+    this.socket = io(socketUrl, {
       auth: {
         token: this.jwtToken
       },
       withCredentials: true,
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      autoConnect: false
     });
+    
+    // Connect manually
+    this.socket.connect();
     
     // Handle connection events
     this.socket.on('connect', () => {

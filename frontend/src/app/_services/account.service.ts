@@ -60,15 +60,19 @@ export class AccountService {
 
   login(email: string, password: string) {
     console.log(`Login attempt for ${email} to URL: ${baseUrl}/authenticate`);
+    
+    // Create consistent headers
+    const httpOptions = {
+      withCredentials: true,
+      headers: new HttpHeaders({
+        'Content-Type': 'application/json'
+      })
+    };
+    
     return this.http.post<any>(
       `${baseUrl}/authenticate`, 
       { email, password }, 
-      { 
-        withCredentials: true,
-        headers: new HttpHeaders({
-          'Content-Type': 'application/json'
-        })
-      }
+      httpOptions
     ).pipe(
       map(account => {
         if (!account || !account.jwtToken) {
@@ -100,6 +104,12 @@ export class AccountService {
       }),
       catchError(error => {
         console.error('Login failed:', error);
+        
+        // Handle CORS errors specially
+        if (error.message && error.message.includes('Http failure response for')) {
+          return throwError(() => new Error('Cannot connect to authentication server. Please try again later.'));
+        }
+        
         // Transform the error to a more user-friendly message
         let errorMsg = 'Login failed';
         if (error.error && error.error.message) {

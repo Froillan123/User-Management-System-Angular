@@ -15,33 +15,67 @@ app.use(bodyParser.json());
 app.use(cookieParser());
 
 // CORS configuration
+app.use((req, res, next) => {
+    // Log the origin for debugging
+    console.log(`Request origin: ${req.headers.origin}`);
+    next();
+});
+
 app.use(cors({
     origin: function(origin, callback) {
         // Allow requests with no origin (like mobile apps, curl, etc)
         if (!origin) return callback(null, true);
         
         // Define allowed origins
-        const allowedOrigins = process.env.NODE_ENV === 'production'
-            ? [
-                process.env.FRONTEND_URL,
-                'https://user-management-system-angular.vercel.app',
-                'https://user-management-system-angular-tm8z.vercel.app',
-                'https://user-management-system-angular-froillan123.vercel.app'
-              ]
-            : ['http://localhost:4200', 'http://localhost:3000', 'http://127.0.0.1:4200'];
+        const allowedOrigins = [
+            'https://user-management-system-angular-tm8z.vercel.app',
+            'https://user-management-system-angular.vercel.app',
+            'https://user-management-system-angular-froillan123.vercel.app',
+            'http://localhost:4200',
+            'http://localhost:3000',
+            'http://127.0.0.1:4200'
+        ];
         
         // Check if the origin is allowed
-        if (allowedOrigins.indexOf(origin) === -1) {
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
             console.log(`CORS blocked request from: ${origin}`);
-            return callback(new Error('CORS policy: Origin not allowed'), false);
+            callback(new Error('Not allowed by CORS'), false);
         }
-        
-        return callback(null, true);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
+
+// Add additional headers to handle preflight requests
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Credentials', 'true');
+    
+    const allowedOrigins = [
+        'https://user-management-system-angular-tm8z.vercel.app',
+        'https://user-management-system-angular.vercel.app',
+        'https://user-management-system-angular-froillan123.vercel.app',
+        'http://localhost:4200',
+        'http://localhost:3000',
+        'http://127.0.0.1:4200'
+    ];
+    
+    const origin = req.headers.origin;
+    if (allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+    }
+    
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    next();
+});
+
+// Handle OPTIONS preflight requests
+app.options('*', (req, res) => {
+    res.sendStatus(200);
+});
 
 // api routes
 app.use('/accounts', require('./accounts/accounts.controller'));
