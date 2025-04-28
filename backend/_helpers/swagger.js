@@ -4,11 +4,9 @@ const swaggerUi = require('swagger-ui-express');
 const YAML = require('yamljs');
 const swaggerDocument = YAML.load('./swagger.yaml');
 
-// This pattern can cause issues with path-to-regexp
-// router.use('/', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-
-// Use explicit routes instead
-router.get('/', swaggerUi.setup(swaggerDocument));
-router.use(swaggerUi.serve);
+// The issue is with path-to-regexp parsing URLs in the swagger document
+// Use a more explicit approach without relying on path matching
+router.use('', swaggerUi.serve);
+router.get('', swaggerUi.setup(swaggerDocument));
 
 module.exports = router;

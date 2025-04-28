@@ -76,20 +76,26 @@ app.options('*', (req, res) => {
     res.sendStatus(200);
 });
 
-// API routes
-app.use('/accounts', require('./accounts/accounts.controller'));
-app.use('/accounts/analytics', require('./accounts/analytics.controller'));
-
-// Swagger docs route - add after API routes
+// API routes - wrap in try/catch to isolate errors
 try {
-    app.use('/api-docs', require('./_helpers/swagger'));
-    console.log('Swagger UI loaded successfully');
+    console.log('Loading accounts controller...');
+    const accountsController = require('./accounts/accounts.controller');
+    app.use('/accounts', accountsController);
+    console.log('Accounts controller loaded successfully');
+    
+    console.log('Loading analytics controller...');
+    const analyticsController = require('./accounts/analytics.controller');
+    app.use('/accounts/analytics', analyticsController);
+    console.log('Analytics controller loaded successfully');
 } catch (error) {
-    console.error('Failed to load Swagger UI:', error);
-    app.use('/api-docs', (req, res) => {
-        res.status(500).send('API Documentation temporarily unavailable');
-    });
+    console.error('Error loading controllers:', error);
+    process.exit(1);
 }
+
+// Swagger docs route - disabled to avoid path-to-regexp errors
+app.use('/api-docs', (req, res) => {
+    res.status(503).send('API Documentation temporarily unavailable due to path-to-regexp issues');
+});
 
 // Global error handler
 app.use(errorHandler);
@@ -97,14 +103,29 @@ app.use(errorHandler);
 // Create HTTP server
 const server = http.createServer(app);
 
-// Initialize Socket.IO
-const socketModule = require('./_helpers/socket');
-socketModule.init(server);
+// Initialize Socket.IO with safeguards
+try {
+    console.log('Initializing Socket.IO...');
+    const socketModule = require('./_helpers/socket');
+    socketModule.init(server);
+    console.log('Socket.IO initialized successfully');
+} catch (error) {
+    console.error('Error initializing Socket.IO:', error);
+}
 
 // Start server
 const port = process.env.NODE_ENV === 'production' ? (process.env.PORT || 80) : 4000;
+
+// Check for path-to-regexp version
+try {
+    const pathToRegexp = require('path-to-regexp');
+    console.log('path-to-regexp version:', require('path-to-regexp/package.json').version);
+} catch (error) {
+    console.error('Could not determine path-to-regexp version:', error.message);
+}
+
 server.listen(port, () => {
     console.log('Server listening on port ' + port);
-    console.log('API Documentation available at /api-docs');
+    console.log('API Documentation temporarily disabled');
     console.log('WebSocket server initialized');
 });
