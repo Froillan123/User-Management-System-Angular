@@ -186,7 +186,8 @@ docker run -p 4000:4000 user-management-backend
 ## 👨‍💻 Developer
 
 <div align="center">
-  <img src="https://avatars.githubusercontent.com/u/your_github_username" width="100" style="border-radius: 50%"/>
+ <img src="https://avatars.githubusercontent.com/u/Froillan123" width="100" style="border-radius: 50%"/>
+
   
   **Edem Froillan Kim B.**
   
