@@ -250,7 +250,12 @@ export class AccountService {
     return this.http.post<any>(
       `${baseUrl}/refresh-token`, 
       body, 
-      { withCredentials: true }
+      { 
+        withCredentials: true,
+        headers: new HttpHeaders({
+          'Content-Type': 'application/json'
+        })
+      }
     ).pipe(
       map((account) => {
         if (!account || !account.jwtToken) {

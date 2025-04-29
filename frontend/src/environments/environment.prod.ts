@@ -6,8 +6,9 @@ export const environment = {
     production: true,
     apiUrl: isLocalhost 
         ? 'http://localhost:4000/accounts'
-        : 'https://user-management-system-angular.onrender.com/accounts',
+        : 'https://user-management-system-backend.vercel.app/accounts',
     wsUrl: isLocalhost
         ? 'ws://localhost:4000'
-        : 'wss://user-management-system-angular.onrender.com'
+        : 'wss://user-management-system-backend.vercel.app',
+    cookieDomain: isLocalhost ? undefined : '.vercel.app'
 };

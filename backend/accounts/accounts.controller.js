@@ -277,7 +277,8 @@ function setTokenCookie(res, token) {
         secure: isProduction,
         sameSite: isProduction ? 'none' : 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
-        path: '/'
+        path: '/',
+        domain: isProduction ? '.vercel.app' : undefined // Allow cookie to work across subdomains in production
     };
 
     // Set the cookie
@@ -288,7 +289,8 @@ function setTokenCookie(res, token) {
         secure: cookieOptions.secure,
         sameSite: cookieOptions.sameSite,
         httpOnly: cookieOptions.httpOnly,
-        path: cookieOptions.path
+        path: cookieOptions.path,
+        domain: cookieOptions.domain
     })}`);
 }
 
