@@ -14,6 +14,10 @@ export class UsersOnlineComponent implements OnInit, OnDestroy {
     loading = true;
     socketSubscription: Subscription;
     statusUpdatesSubscription: Subscription;
+    currentPage = 1;
+    itemsPerPage = 5;
+    totalPages = 1;
+    Math = Math; // Make Math available in template
     
     constructor(
         private accountService: AccountService,
@@ -21,35 +25,8 @@ export class UsersOnlineComponent implements OnInit, OnDestroy {
     ) {}
     
     ngOnInit() {
-        // Initial load of users
-        this.loadUsers();
-        
-        // Connect to socket service if not already connected
-        this.socketService.connect();
-        
-        // Subscribe to socket service for real-time updates on all users
-        this.socketSubscription = this.socketService.getOnlineUsers()
-            .subscribe(users => {
-                if (users && users.length > 0) {
-                    this.accounts = users;
-                    this.loading = false;
-                }
-            });
-        
-        // Subscribe to individual user status updates
-        this.statusUpdatesSubscription = this.socketService.getUserStatusUpdates()
-            .subscribe(update => {
-                // Update the status of the specific user
-                this.accounts = this.accounts.map(user => {
-                    if (user.id === update.userId) {
-                        return {
-                            ...user,
-                            isOnline: update.isOnline
-                        };
-                    }
-                    return user;
-                });
-            });
+        this.loadAccounts();
+        this.setupSocketListeners();
     }
     
     ngOnDestroy() {
@@ -62,22 +39,59 @@ export class UsersOnlineComponent implements OnInit, OnDestroy {
         }
     }
     
-    loadUsers() {
-        this.accountService.getOnlineUsers()
+    private loadAccounts() {
+        this.loading = true;
+        this.accountService.getAll()
             .pipe(first())
             .subscribe({
                 next: accounts => {
-                    this.accounts = accounts;
+                    // Sort accounts to show online users first
+                    this.accounts = accounts.sort((a, b) => {
+                        if (a.isOnline && !b.isOnline) return -1;
+                        if (!a.isOnline && b.isOnline) return 1;
+                        return 0;
+                    });
+                    this.totalPages = Math.ceil(this.accounts.length / this.itemsPerPage);
                     this.loading = false;
-                    
-                    // Update socket service with latest data
-                    this.socketService.updateOnlineUsers(accounts);
                 },
                 error: error => {
-                    console.error('Error loading online users:', error);
+                    console.error('Error loading accounts:', error);
                     this.loading = false;
                 }
             });
+    }
+    
+    private setupSocketListeners() {
+        // Listen for user status updates
+        this.socketSubscription = this.socketService.getUserStatusUpdates().subscribe(update => {
+            const account = this.accounts.find(a => a.id === update.userId);
+            if (account) {
+                account.isOnline = update.isOnline;
+                // Re-sort accounts to maintain online users first
+                this.accounts.sort((a, b) => {
+                    if (a.isOnline && !b.isOnline) return -1;
+                    if (!a.isOnline && b.isOnline) return 1;
+                    return 0;
+                });
+            }
+        });
+    }
+    
+    get paginatedAccounts() {
+        const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+        return this.accounts.slice(startIndex, startIndex + this.itemsPerPage);
+    }
+    
+    nextPage() {
+        if (this.currentPage < this.totalPages) {
+            this.currentPage++;
+        }
+    }
+    
+    previousPage() {
+        if (this.currentPage > 1) {
+            this.currentPage--;
+        }
     }
     
     // Helper methods for the template

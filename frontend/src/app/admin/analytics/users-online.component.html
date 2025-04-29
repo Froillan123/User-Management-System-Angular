@@ -1,30 +1,9 @@
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="mb-0 fw-light">
-                        <i class="fas fa-users text-primary me-2"></i>Online Users
-                    </h1>
-                    <p class="text-muted lead">Real-time monitoring of user activity</p>
-                </div>
-                <a routerLink=".." class="btn btn-outline-primary rounded-pill">
-                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
-                </a>
-            </div>
-        </div>
-    </div>
-
+<div class="container py-4">
     <div class="row">
         <div class="col-12">
-            <div class="card shadow border-0 rounded-4">
-                <div class="card-header py-3 bg-white d-flex justify-content-between align-items-center">
-                    <h6 class="m-0 font-weight-bold text-primary">User Activity Status</h6>
-                    <div>
-                        <button class="btn btn-sm btn-primary rounded-pill" (click)="loadUsers()">
-                            <i class="fas fa-sync-alt me-1"></i> Refresh Data
-                        </button>
-                    </div>
+            <div class="card shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0">Users Online Status</h5>
                 </div>
                 <div class="card-body">
                     <div *ngIf="loading" class="d-flex justify-content-center p-5">
@@ -85,7 +64,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr *ngFor="let account of accounts">
+                                    <tr *ngFor="let account of paginatedAccounts">
                                         <td>
                                             <span class="d-inline-block position-relative me-2 p-1" 
                                                   [ngClass]="{'text-success': account.isOnline, 'text-secondary': !account.isOnline}">
@@ -126,6 +105,21 @@
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div class="d-flex justify-content-between align-items-center mt-4">
+                            <div class="text-muted">
+                                Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to {{ Math.min(currentPage * itemsPerPage, accounts.length) }} of {{ accounts.length }} users
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-outline-primary" [disabled]="currentPage === 1" (click)="previousPage()">
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </button>
+                                <button class="btn btn-outline-primary" [disabled]="currentPage === totalPages" (click)="nextPage()">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
