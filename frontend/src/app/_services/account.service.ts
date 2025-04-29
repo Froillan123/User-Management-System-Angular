@@ -14,6 +14,7 @@ const baseUrl = `${environment.apiUrl}`;
 export class AccountService {
   private accountSubject: BehaviorSubject<Account | null>;
   public account: Observable<Account | null>;
+  private refreshTokenTimeout: any;
 
   constructor(
     private router: Router,
@@ -124,8 +125,25 @@ export class AccountService {
 
   logout() {
     const refreshToken = this.accountValue?.refreshToken;
+    
+    // First disconnect socket to mark user as offline
+    this.socketService.disconnect();
+    
+    // Immediately mark user as offline in the database
+    if (this.accountValue?.id) {
+      this.http.post<any>(`${baseUrl}/set-offline`, { userId: this.accountValue.id }, { withCredentials: true })
+        .subscribe({
+          next: () => {
+            console.log('User marked as offline');
+          },
+          error: (error) => {
+            console.error('Error marking user as offline:', error);
+          }
+        });
+    }
+    
     if (refreshToken) {
-      // First try to revoke the token
+      // Then try to revoke the token
       this.http.post<any>(`${baseUrl}/revoke-token`, { token: refreshToken }, { withCredentials: true })
         .subscribe({
           next: () => {
@@ -140,24 +158,19 @@ export class AccountService {
     } else {
       this.cleanupAndRedirect();
     }
-    
-    // Disconnect from socket
-    this.socketService.disconnect();
   }
 
   private cleanupAndRedirect() {
     this.stopRefreshTokenTimer();
     this.accountSubject.next(null);
     localStorage.removeItem('account');
-    localStorage.removeItem('refreshToken'); // Also remove fallback refresh token
+    localStorage.removeItem('refreshToken');
     
     // Reset current user ID in socket service
     this.socketService.setCurrentUser('', '');
     
     this.router.navigate(['/account/login']);
   }
-
-  private refreshTokenTimeout: any;
 
   private startRefreshTokenTimer() {
     try {

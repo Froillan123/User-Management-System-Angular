@@ -28,7 +28,8 @@ module.exports = {
     create,
     update,
     delete: _delete,
-    getAllAccounts
+    getAllAccounts,
+    setOffline
 };
 
 async function authenticate({ email, password, ipAddress }) {
@@ -491,4 +492,17 @@ async function sendPasswordResetEmail(account, origin) {
             </div>
         `
     });
+}
+
+async function setOffline(userId) {
+    const account = await db.Account.findByPk(userId);
+    if (!account) {
+        throw 'Account not found';
+    }
+
+    account.isOnline = false;
+    account.lastActive = new Date();
+    await account.save();
+
+    return account;
 }

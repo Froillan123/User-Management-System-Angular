@@ -6,6 +6,7 @@ const authorize = require('../_middleware/authorize');
 const Role = require('../_helpers/role');
 const accountService = require('./account.service');
 const db = require('../_helpers/db');
+const socketModule = require('../_helpers/socket');
 
 // routes
 router.post('/authenticate', authenticateSchema, authenticate);
@@ -24,6 +25,7 @@ router.delete('/:id', authorize(), _delete);
 // Debug routes
 router.get('/debug/tokens', authorize(), getActiveTokens);
 router.post('/debug/clear-tokens', authorize(), clearInactiveTokens);
+router.post('/set-offline', authorize(), setOffline);
 
 module.exports = router;
 
@@ -340,4 +342,23 @@ function clearInactiveTokens(req, res, next) {
         res.json({ message: `${count} inactive tokens cleared` });
     })
     .catch(next);
+}
+
+function setOffline(req, res, next) {
+    const userId = req.body.userId;
+    if (!userId) {
+        return res.status(400).json({ message: 'User ID is required' });
+    }
+
+    accountService.setOffline(userId)
+        .then(() => {
+            // Broadcast the offline status to all clients
+            try {
+                socketModule.updateUserStatus(userId, false);
+            } catch (error) {
+                console.error('Error broadcasting offline status:', error);
+            }
+            res.json({ message: 'User marked as offline' });
+        })
+        .catch(next);
 }

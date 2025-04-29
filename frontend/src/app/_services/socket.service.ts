@@ -22,6 +22,10 @@ export class SocketService {
   private currentUserId: string = '';
   private jwtToken: string = '';
   private heartbeatInterval: any;
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 5;
+  private reconnectDelay = 1000; // Start with 1 second
+  private lastHeartbeat: Date | null = null;
 
   constructor() {
     // Try to get the current user ID and token from localStorage
@@ -31,6 +35,11 @@ export class SocketService {
         const account = JSON.parse(accountData);
         this.currentUserId = account.id || '';
         this.jwtToken = account.jwtToken || '';
+        
+        // If we have credentials, try to connect
+        if (this.currentUserId && this.jwtToken) {
+          this.connect();
+        }
       }
     } catch (e) {
       console.error('Error getting account from localStorage:', e);
@@ -45,8 +54,10 @@ export class SocketService {
     // If connected, disconnect and reconnect with new token
     if (this.isConnected) {
       this.disconnect();
-      this.connect();
     }
+    
+    // Connect with new credentials
+    this.connect();
   }
 
   // Connect to the WebSocket server
@@ -65,7 +76,12 @@ export class SocketService {
       },
       withCredentials: true,
       transports: ['websocket', 'polling'],
-      autoConnect: false
+      autoConnect: false,
+      reconnection: true,
+      reconnectionAttempts: this.maxReconnectAttempts,
+      reconnectionDelay: this.reconnectDelay,
+      reconnectionDelayMax: 5000,
+      timeout: 10000
     });
     
     // Connect manually
@@ -75,15 +91,27 @@ export class SocketService {
     this.socket.on('connect', () => {
       console.log('Socket connected successfully');
       this.isConnected = true;
+      this.reconnectAttempts = 0;
+      this.reconnectDelay = 1000;
+      this.lastHeartbeat = new Date();
       
       // Start sending heartbeats every 30 seconds
       this.startHeartbeat();
+      
+      // Request initial data
+      this.requestInitialData();
     });
     
     // Handle online users updates
     this.socket.on('online-users-update', (users: Account[]) => {
       console.log('Received online users update:', users.length);
-      this.onlineUsers.next(users);
+      // Filter out users who haven't sent a heartbeat in the last 5 minutes
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      const activeUsers = users.filter(user => {
+        if (!user.lastActive) return false;
+        return new Date(user.lastActive) > fiveMinutesAgo;
+      });
+      this.onlineUsers.next(activeUsers);
     });
     
     // Handle user stats updates
@@ -115,13 +143,35 @@ export class SocketService {
       console.log('Socket disconnected');
       this.isConnected = false;
       this.stopHeartbeat();
+      
+      // Attempt to reconnect if we haven't exceeded max attempts
+      if (this.reconnectAttempts < this.maxReconnectAttempts) {
+        this.reconnectAttempts++;
+        this.reconnectDelay = Math.min(this.reconnectDelay * 2, 5000); // Exponential backoff
+        setTimeout(() => this.connect(), this.reconnectDelay);
+      }
     });
     
     // Handle connection errors
     this.socket.on('connect_error', (error) => {
       console.error('Socket connection error:', error);
       this.isConnected = false;
+      
+      // Attempt to reconnect if we haven't exceeded max attempts
+      if (this.reconnectAttempts < this.maxReconnectAttempts) {
+        this.reconnectAttempts++;
+        this.reconnectDelay = Math.min(this.reconnectDelay * 2, 5000); // Exponential backoff
+        setTimeout(() => this.connect(), this.reconnectDelay);
+      }
     });
+  }
+
+  // Request initial data after connection
+  private requestInitialData(): void {
+    if (this.socket && this.isConnected) {
+      this.socket.emit('get-online-users');
+      this.socket.emit('get-user-stats');
+    }
   }
 
   // Disconnect from the WebSocket server
@@ -133,6 +183,8 @@ export class SocketService {
     this.socket.disconnect();
     this.socket = null;
     this.isConnected = false;
+    this.reconnectAttempts = 0;
+    this.lastHeartbeat = null;
   }
 
   // Start sending heartbeats
@@ -141,6 +193,7 @@ export class SocketService {
     this.heartbeatInterval = setInterval(() => {
       if (this.socket && this.isConnected) {
         this.socket.emit('heartbeat');
+        this.lastHeartbeat = new Date();
       }
     }, 30000); // Send heartbeat every 30 seconds
   }
@@ -203,14 +256,20 @@ export class SocketService {
   // Helper method to get current online count
   getOnlineCount(): Observable<number> {
     return this.onlineUsers.pipe(
-      map(users => users.filter(u => u.isOnline).length)
+      map(users => {
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        return users.filter(u => u.isOnline && u.lastActive && new Date(u.lastActive) > fiveMinutesAgo).length;
+      })
     );
   }
 
   // Helper method to get current offline count
   getOfflineCount(): Observable<number> {
     return this.onlineUsers.pipe(
-      map(users => users.filter(u => !u.isOnline).length)
+      map(users => {
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        return users.filter(u => !u.isOnline || !u.lastActive || new Date(u.lastActive) <= fiveMinutesAgo).length;
+      })
     );
   }
 } 

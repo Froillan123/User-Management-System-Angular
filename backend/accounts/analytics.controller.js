@@ -9,8 +9,8 @@ const socketModule = require('../_helpers/socket');
 const db = require('../_helpers/db');
 
 // Routes
-router.get('/user-stats', getUserStats);
-router.get('/online-users', getOnlineUsers);
+router.get('/user-stats', authorize(), getUserStats);
+router.get('/online-users', authorize(), getOnlineUsers);
 
 module.exports = router;
 
