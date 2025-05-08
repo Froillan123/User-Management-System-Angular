@@ -21,7 +21,7 @@ const allowedOrigins = [
 ];
 
 // Parse JSON and URL-encoded data
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({ extended: false }));x
 app.use(bodyParser.json());
 app.use(cookieParser());
 
