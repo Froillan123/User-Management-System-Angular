@@ -27,7 +27,7 @@
                 <tbody>
                     <tr *ngFor="let employee of pagedEmployees">
                         <td>{{employee.employeeId || 'N/A'}}</td>
-                        <td>{{employee.user?.email || 'Not linked'}}</td>
+                        <td>{{employee.email || 'Not linked'}}</td>
                         <td>{{employee.position}}</td>
                         <td>{{employee.department?.name || 'None'}}</td>
                         <td>{{employee.hireDate | date:'shortDate'}}</td>
