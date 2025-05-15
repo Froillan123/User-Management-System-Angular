@@ -1,0 +1,159 @@
+<h1>Employee Workflow Approvals</h1>
+<div class="card shadow-sm">
+    <div class="card-header bg-white py-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0" *ngIf="employee">
+                <span class="badge bg-primary me-2">{{employee.employeeId}}</span>
+                {{employee.firstName}} {{employee.lastName}}
+            </h5>
+            <a routerLink="/admin/employees" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Back to Employees
+            </a>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div *ngIf="loading" class="text-center p-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <div class="mt-3">Loading workflows...</div>
+        </div>
+        
+        <div *ngIf="!loading && workflows.length === 0" class="text-center p-5">
+            <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+            <h3>No Workflows</h3>
+            <p class="text-muted">No workflow events found for this employee</p>
+        </div>
+        
+        <div *ngIf="!loading && workflows.length > 0" class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Type</th>
+                        <th>Details</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let workflow of pagedWorkflows">
+                        <td>
+                            <span [ngClass]="{
+                                'badge rounded-pill bg-info': workflow.type === 'Transfer',
+                                'badge rounded-pill bg-warning': workflow.type === 'Request Created',
+                                'badge rounded-pill bg-success': workflow.type === 'Request Approval'
+                            }">{{workflow.type}}</span>
+                        </td>
+                        <td>
+                            <span *ngIf="workflow.type === 'Transfer'">
+                                <div class="fw-bold">Department Transfer Request</div>
+                                <div>From: <span class="text-muted">{{workflow.details?.oldDepartmentName || 'None'}}</span></div>
+                                <div>To: <span class="text-primary">{{workflow.details?.newDepartmentName}}</span></div>
+                                <div *ngIf="workflow.details?.transferRequestedBy" class="text-muted small mt-1">
+                                    Requested by: {{workflow.details?.transferRequestedBy}}
+                                </div>
+                                <div *ngIf="workflow.details?.requestDate" class="text-muted small">
+                                    Date: {{workflow.details?.requestDate | date:'medium'}}
+                                </div>
+                            </span>
+                            <span *ngIf="workflow.type === 'Onboarding'">
+                                {{workflow.details?.task || 'Task: Setup workstation'}}
+                            </span>
+                            <span *ngIf="workflow.type === 'Request Approval'">
+                                {{workflow.details?.message}}
+                                <div *ngIf="workflow.details?.items && workflow.details?.items.length" class="mt-2">
+                                    <strong>Items:</strong>
+                                    <ul class="list-unstyled ms-3 mb-0">
+                                        <li *ngFor="let item of workflow.details?.items">
+                                            <i class="fas fa-check-circle text-success me-1"></i> {{item}}
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div *ngIf="(!workflow.details?.items || !workflow.details?.items.length) && workflow.details?.requestId" class="text-muted mt-1">
+                                    <small>No items found for this request</small>
+                                </div>
+                            </span>
+                            <span *ngIf="workflow.type === 'Request Created'">
+                                {{workflow.details?.message || 'New request created'}}
+                                <div *ngIf="workflow.details?.items && workflow.details?.items.length" class="mt-2">
+                                    <strong>Items:</strong>
+                                    <ul class="list-unstyled ms-3 mb-0">
+                                        <li *ngFor="let item of workflow.details?.items">
+                                            <i class="fas fa-box me-1"></i> {{item}}
+                                        </li>
+                                    </ul>
+                                </div>
+                            </span>
+                            <span *ngIf="workflow.type === 'Request Status Update'">
+                                {{workflow.details?.message || 'Status updated'}}
+                                <div *ngIf="workflow.details?.items && workflow.details?.items.length" class="mt-2">
+                                    <strong>Items:</strong>
+                                    <ul class="list-unstyled ms-3 mb-0">
+                                        <li *ngFor="let item of workflow.details?.items">
+                                            <i class="fas fa-box me-1"></i> {{item}}
+                                        </li>
+                                    </ul>
+                                </div>
+                            </span>
+                            <span *ngIf="workflow.type !== 'Transfer' && 
+                                        workflow.type !== 'Onboarding' && 
+                                        workflow.type !== 'Request Approval' &&
+                                        workflow.type !== 'Request Created' &&
+                                        workflow.type !== 'Request Status Update'">
+                                {{formatDetails(workflow.details)}}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge rounded-pill" [ngClass]="{
+                                'bg-warning': workflow.status === 'Pending',
+                                'bg-success': workflow.status === 'Approved',
+                                'bg-danger': workflow.status === 'Rejected'
+                            }">
+                                {{workflow.status || 'Pending'}}
+                            </span>
+                        </td>
+                        <td>
+                            <select *ngIf="workflow.status === 'Pending'" class="form-select form-select-sm" style="width: 130px;"
+                                    (change)="updateWorkflowStatus(workflow, $event)">
+                                <option value="default" selected disabled>Action</option>
+                                <option value="Approved">Approve</option>
+                                <option value="Rejected">Reject</option>
+                            </select>
+                            <div *ngIf="workflow.updating">
+                                <span class="spinner-border spinner-border-sm text-primary"></span> Processing...
+                            </div>
+                            <button *ngIf="workflow.status !== 'Pending' && !workflow.updating" 
+                                    class="btn btn-sm" 
+                                    [ngClass]="{
+                                        'btn-outline-success': workflow.status === 'Approved',
+                                        'btn-outline-danger': workflow.status === 'Rejected'
+                                    }" 
+                                    disabled>
+                                {{workflow.status}} <i class="fas fa-lock ms-1"></i>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination controls -->
+        <div *ngIf="!loading && workflows.length > 0" class="d-flex justify-content-between align-items-center mt-3">
+            <div>
+                <span class="me-2">Page {{currentPage + 1}} of {{totalPages}}</span>
+                <span class="text-muted small">({{workflows.length}} total workflows)</span>
+            </div>
+            <div>
+                <button class="btn btn-sm btn-outline-primary me-1" 
+                        (click)="setPage(currentPage - 1)"
+                        [disabled]="currentPage === 0">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-primary" 
+                        (click)="setPage(currentPage + 1)"
+                        [disabled]="currentPage === totalPages - 1">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div> 

@@ -1,0 +1,79 @@
+<h1>Workflows</h1>
+<div class="card">
+    <div class="card-body">
+        <div *ngIf="loading" class="spinner-border spinner-border-sm"></div>
+        <div *ngIf="!loading && workflows.length === 0" class="text-center">
+            <p>No workflow events found</p>
+        </div>
+        <table *ngIf="!loading && workflows.length > 0" class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Type</th>
+                    <th>Details</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let workflow of pagedWorkflows">
+                    <td>{{workflow.employee?.firstName}} {{workflow.employee?.lastName}}</td>
+                    <td>{{workflow.type}}</td>
+                    <td>
+                        <span *ngIf="workflow.type === 'Transfer'">
+                            Transferred to 
+                            <strong>{{workflow.details?.newDepartmentName || 'Unknown'}}</strong>
+                            <span *ngIf="workflow.details?.oldDepartmentName">
+                                from <strong>{{workflow.details?.oldDepartmentName}}</strong>
+                            </span>
+                        </span>
+                        <span *ngIf="workflow.type === 'Request Created'">
+                            {{workflow.details?.message || 'New request created'}}
+                            <div *ngIf="workflow.details?.items && workflow.details?.items.length" class="mt-2 small">
+                                <strong>Items:</strong>
+                                <ul class="list-unstyled ms-3 mb-0">
+                                    <li *ngFor="let item of workflow.details?.items">
+                                        <i class="fas fa-box me-1"></i> {{item}}
+                                    </li>
+                                </ul>
+                            </div>
+                        </span>
+                        <span *ngIf="workflow.type !== 'Transfer' && workflow.type !== 'Request Created'">
+                            {{workflow.details?.message || (workflow.details | json)}}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge" [ngClass]="{
+                            'bg-warning': workflow.status === 'Pending',
+                            'bg-success': workflow.status === 'Approved' || workflow.status === 'Completed',
+                            'bg-danger': workflow.status === 'Rejected'
+                        }">
+                            {{workflow.status || 'Pending'}}
+                        </span>
+                    </td>
+                    <td>{{workflow.created | date:'medium'}}</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <!-- Pagination controls -->
+        <div *ngIf="!loading && workflows.length > 0" class="d-flex justify-content-between align-items-center mt-3">
+            <div>
+                <span class="me-2">Page {{currentPage + 1}} of {{totalPages}}</span>
+                <span class="text-muted small">({{workflows.length}} total workflows)</span>
+            </div>
+            <div>
+                <button class="btn btn-sm btn-outline-primary me-1" 
+                        (click)="setPage(currentPage - 1)"
+                        [disabled]="currentPage === 0">
+                    Previous
+                </button>
+                <button class="btn btn-sm btn-outline-primary" 
+                        (click)="setPage(currentPage + 1)"
+                        [disabled]="currentPage === totalPages - 1">
+                    Next
+                </button>
+            </div>
+        </div>
+    </div>
+</div> 

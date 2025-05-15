@@ -1,0 +1,183 @@
+<div class="container-fluid p-1">
+    <div class="row mb-2">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="mb-0 fs-4">
+                    <span class="fw-bold">Analytics</span> Dashboard
+                </h1>
+                <div>
+                    <button class="btn btn-sm btn-primary" (click)="loadStats()">
+                        <i class="fas fa-sync-alt me-1"></i> Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row g-2 mb-3">
+        <div class="col-xl-3 col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body p-2">
+                    <div class="d-flex align-items-center">
+                        <div class="me-auto">
+                            <div class="text-muted small mb-1">Total Users</div>
+                            <div class="d-flex align-items-center">
+                                <h3 class="mb-0 fs-4">{{ totalUsers }}</h3>
+                            </div>
+                        </div>
+                        <div class="bg-primary text-white rounded p-2">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body p-2">
+                    <div class="d-flex align-items-center">
+                        <div class="me-auto">
+                            <div class="text-muted small mb-1">Active Users</div>
+                            <div class="d-flex align-items-center">
+                                <h3 class="mb-0 fs-4">{{ activeUsers }}</h3>
+                            </div>
+                        </div>
+                        <div class="bg-success text-white rounded p-2">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body p-2">
+                    <div class="d-flex align-items-center">
+                        <div class="me-auto">
+                            <div class="text-muted small mb-1">Online Users</div>
+                            <div class="d-flex align-items-center">
+                                <h3 class="mb-0 fs-4">{{ onlineUsers }}</h3>
+                            </div>
+                        </div>
+                        <div class="bg-info text-white rounded p-2">
+                            <i class="fas fa-wifi"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body p-2">
+                    <div class="d-flex align-items-center">
+                        <div class="me-auto">
+                            <div class="text-muted small mb-1">Verified Users</div>
+                            <div class="d-flex align-items-center">
+                                <h3 class="mb-0 fs-4">{{ verifiedUsers }}</h3>
+                            </div>
+                        </div>
+                        <div class="bg-warning text-white rounded p-2">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row g-2">
+        <!-- User Activity Stats -->
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 text-dark">User Activity</h6>
+                </div>
+                <div class="card-body p-2">
+                    <div *ngIf="loading" class="d-flex justify-content-center py-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <div class="card bg-light">
+                                <div class="card-body text-center p-2">
+                                    <h5 class="mb-1 text-primary">{{ activeUsers }}</h5>
+                                    <p class="mb-0 small text-muted">Active Users</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="card bg-light">
+                                <div class="card-body text-center p-2">
+                                    <h5 class="mb-1 text-success">{{ onlineUsers }}</h5>
+                                    <p class="mb-0 small text-muted">Online Now</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="card bg-light">
+                                <div class="card-body text-center p-2">
+                                    <h5 class="mb-1 text-warning">{{ verifiedUsers }}</h5>
+                                    <p class="mb-0 small text-muted">Verified</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="card bg-light">
+                                <div class="card-body text-center p-2">
+                                    <h5 class="mb-1 text-danger">{{ refreshTokens }}</h5>
+                                    <p class="mb-0 small text-muted">Active Sessions</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 mt-2">
+                            <a routerLink="users-online" class="btn btn-primary btn-sm w-100">
+                                <i class="fas fa-users me-1"></i>View Online Users
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-pie mt-3" style="height: 180px;">
+                        <canvas #tokenChart></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Registration Chart -->
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 text-dark">User Registration Overview</h6>
+                </div>
+                <div class="card-body p-2">
+                    <div *ngIf="loading" class="d-flex justify-content-center py-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                    <div class="chart-area" style="height: 320px;">
+                        <canvas #usersChart></canvas>
+                    </div>
+                </div>
+                <div class="card-footer bg-white py-2">
+                    <div class="d-flex justify-content-between align-items-center small">
+                        <div class="text-muted">Updated in real-time</div>
+                        <div>
+                            <span class="badge badge-primary px-2 py-1">
+                                <i class="fas fa-circle me-1"></i>Active
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Link to CDN for Chart.js (in a real app this would be properly imported in the module) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 

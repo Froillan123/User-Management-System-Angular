@@ -1,0 +1,86 @@
+<div class="card">
+    <div class="card-header">REQUESTS</div>
+    <div class="card-body">
+        <div *ngIf="loading" class="text-center p-3">
+            <div class="spinner-border spinner-border-sm"></div>
+            <span class="ms-2">Loading requests...</span>
+        </div>
+        
+        <div *ngIf="!loading && requests.length === 0" class="text-center p-3">
+            <p class="mb-3">No requests found</p>
+            <a routerLink="add" class="btn btn-primary">Add Request</a>
+        </div>
+        
+        <div *ngIf="!loading && requests.length > 0">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Employee</th>
+                        <th>Items</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let request of pagedRequests">
+                        <td>{{request.type}}</td>
+                        <td>{{request.employee?.firstName}} {{request.employee?.lastName}}</td>
+                        <td>
+                            <div *ngIf="!request.items || request.items.length === 0" class="text-muted">
+                                No items found
+                            </div>
+                            <ul *ngIf="request.items && request.items.length > 0" class="mb-0 ps-3">
+                                <li *ngFor="let item of request.items">
+                                    <strong>{{item.name}}</strong> (x{{item.quantity}})
+                                </li>
+                            </ul>
+                        </td>
+                        <td>
+                            <span [ngClass]="'badge ' + getBadgeClass(request.status)">
+                                {{request.status}}
+                            </span>
+                        </td>
+                        <td>
+                            <!-- Only show actions if request is not approved -->
+                            <div *ngIf="request.status !== 'Approved'">
+                                <a routerLink="edit/{{request.id}}" class="btn btn-sm btn-primary me-1">Edit</a>
+                                <button (click)="deleteRequest(request.id)" class="btn btn-sm btn-danger" 
+                                    [disabled]="request.isDeleting">
+                                    <span *ngIf="request.isDeleting" class="spinner-border spinner-border-sm"></span>
+                                    <span *ngIf="!request.isDeleting">Delete</span>
+                                </button>
+                            </div>
+                            <span *ngIf="request.status === 'Approved'" class="text-muted small">
+                                No actions available
+                            </span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <!-- Pagination controls -->
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div>
+                    <span class="me-2">Page {{currentPage + 1}} of {{totalPages}}</span>
+                    <span class="text-muted small">({{requests.length}} total items)</span>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary me-1" 
+                            (click)="setPage(currentPage - 1)"
+                            [disabled]="currentPage === 0">
+                        Previous
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" 
+                            (click)="setPage(currentPage + 1)"
+                            [disabled]="currentPage === totalPages - 1">
+                        Next
+                    </button>
+                </div>
+                <div>
+                    <a routerLink="add" class="btn btn-primary">Add Request</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 

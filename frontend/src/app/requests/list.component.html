@@ -1,0 +1,58 @@
+<div class="mb-3">
+    <a routerLink="add" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i> Add Request
+    </a>
+</div>
+
+<div *ngIf="loading" class="text-center my-5">
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+</div>
+
+<div *ngIf="!loading">
+    <div *ngIf="!requests.length" class="alert alert-info">
+        <p class="mb-0">No requests found. Click the "Add Request" button to create one.</p>
+    </div>
+
+    <div *ngIf="requests.length" class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th class="text-center">Items</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr *ngFor="let request of requests">
+                    <td>{{request.type}}</td>
+                    <td>
+                        <span class="badge" 
+                            [ngClass]="{
+                                'bg-warning': request.status === 'Pending',
+                                'bg-success': request.status === 'Approved',
+                                'bg-danger': request.status === 'Rejected'
+                            }">
+                            {{request.status}}
+                        </span>
+                    </td>
+                    <td>{{request.created | date:'short'}}</td>
+                    <td class="text-center">{{request.items?.length || 0}}</td>
+                    <td class="text-end">
+                        <a routerLink="edit/{{request.id}}" class="btn btn-sm btn-primary me-1">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <button (click)="deleteRequest(request.id)" class="btn btn-sm btn-danger btn-delete-request"
+                                [disabled]="request.isDeleting">
+                            <span *ngIf="request.isDeleting" class="spinner-border spinner-border-sm"></span>
+                            <span *ngIf="!request.isDeleting"><i class="fas fa-trash"></i></span>
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div> 
