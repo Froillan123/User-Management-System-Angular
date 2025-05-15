@@ -343,7 +343,7 @@ async function sendVerificationEmail(account, origin) {
     } else {
         baseUrl = env === 'development' 
             ? 'http://localhost:4200'
-            : 'https://user-management-system-angular-tm8z.vercel.app';
+            : 'https://user-management-system-angular.vercel.app';
     }
     
     const verifyUrl = `${baseUrl}/account/verify-email?token=${account.verificationToken}`;
@@ -398,7 +398,7 @@ async function sendAlreadyRegisteredEmail(email, origin) {
     } else {
         baseUrl = env === 'development' 
             ? 'http://localhost:4200'
-            : 'https://user-management-system-angular-tm8z.vercel.app';
+            : 'https://user-management-system-angular.vercel.app';
     }
     
     const forgotPasswordUrl = `${baseUrl}/account/forgot-password`;
@@ -450,7 +450,7 @@ async function sendPasswordResetEmail(account, origin) {
     } else {
         baseUrl = env === 'development' 
             ? 'http://localhost:4200'
-            : 'https://user-management-system-angular-tm8z.vercel.app';
+            : 'https://user-management-system-angular.vercel.app';
     }
     
     const resetUrl = `${baseUrl}/account/reset-password?token=${account.resetToken}`;
