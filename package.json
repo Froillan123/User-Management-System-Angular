@@ -1,0 +1,11 @@
+{
+  "name": "user-management-system-angular",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+} 
