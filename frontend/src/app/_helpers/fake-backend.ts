@@ -1017,6 +1017,16 @@ export class FakeBackendInterceptor implements HttpInterceptor {
             request.status = 'Pending';
             request.createdAt = new Date().toISOString();
             request.updatedAt = new Date().toISOString();
+            
+            // Assign IDs to items if they exist
+            if (request.items && Array.isArray(request.items)) {
+                request.items = request.items.map((item, index) => ({
+                    ...item,
+                    id: index + 1,
+                    status: item.status || 'Pending'
+                }));
+            }
+            
             requests.push(request);
             localStorage.setItem(requestsKey, JSON.stringify(requests));
             
@@ -1031,10 +1041,10 @@ export class FakeBackendInterceptor implements HttpInterceptor {
                 status: 'Pending',
                 details: {
                     requestId: request.id,
-                    requestType: request.type,
-                    departmentId: employee?.departmentId,
-                    departmentName: department?.name || 'No Department',
                     message: `New ${request.type} request created`,
+                    // Store all request data needed for display
+                    requestType: request.type,
+                    requesterId: request.employeeId,
                     items: request.items || []
                 },
                 created: new Date().toISOString(),
@@ -1057,6 +1067,7 @@ export class FakeBackendInterceptor implements HttpInterceptor {
             
             const account = currentAccount();
             const existingRequest = requests[requestIndex];
+            let updatedRequest;
             
             // Check authorization
             if (!isAuthorized(Role.Admin)) {
@@ -1066,29 +1077,78 @@ export class FakeBackendInterceptor implements HttpInterceptor {
                 }
                 
                 // Regular users can only update certain fields
-                const allowedFields = ['title', 'description', 'type'];
-                const updatedRequest = { ...existingRequest };
+                updatedRequest = { ...existingRequest };
                 
+                const allowedFields = ['title', 'description', 'type'];
                 allowedFields.forEach(field => {
                     if (body[field] !== undefined) {
                         updatedRequest[field] = body[field];
                     }
                 });
-                
-                updatedRequest.updatedAt = new Date().toISOString();
-                requests[requestIndex] = updatedRequest;
             } else {
                 // Admins can update any field
-                const updatedRequest = { 
+                updatedRequest = { 
                     ...existingRequest,
-                    ...body,
-                    updatedAt: new Date().toISOString()
+                    ...body
                 };
-                requests[requestIndex] = updatedRequest;
             }
             
+            // Process items to ensure all have valid IDs
+            if (updatedRequest.items && Array.isArray(updatedRequest.items)) {
+                // Get maximum existing ID
+                const maxId = updatedRequest.items
+                    .filter(item => item.id !== null && item.id !== undefined)
+                    .reduce((max, item) => Math.max(max, item.id), 0);
+                
+                // Assign new IDs to items with null IDs
+                let nextId = maxId + 1;
+                updatedRequest.items = updatedRequest.items.map(item => {
+                    if (item.id === null || item.id === undefined) {
+                        return {
+                            ...item,
+                            id: nextId++,
+                            status: item.status || 'Pending'
+                        };
+                    }
+                    return item;
+                });
+            }
+            
+            // Update timestamp
+            updatedRequest.updatedAt = new Date().toISOString();
+            
+            // Save the updated request
+            requests[requestIndex] = updatedRequest;
             localStorage.setItem(requestsKey, JSON.stringify(requests));
-            return ok(requests[requestIndex]);
+            
+            // Update related workflows
+            const relatedWorkflows = workflows.filter(w => 
+                (w.type === 'Request' || w.type === 'Request Approval') && 
+                w.details && 
+                w.details.requestId === requestId
+            );
+            
+            if (relatedWorkflows.length > 0) {
+                relatedWorkflows.forEach(workflow => {
+                    // Update workflow details based on the new request
+                    if (workflow.type === 'Request Approval' || workflow.type === 'Request') {
+                        workflow.details = {
+                            ...workflow.details,
+                            // Update title if workflow has been converted to Request Approval format
+                            title: workflow.type === 'Request Approval' ? 
+                                `Review ${updatedRequest.type} request #${updatedRequest.id} with ${updatedRequest.items?.length || 0} items` : 
+                                workflow.details.title,
+                            // Always include the latest items from the request
+                            items: updatedRequest.items || []
+                        };
+                        workflow.updated = new Date().toISOString();
+                    }
+                });
+                
+                localStorage.setItem(workflowsKey, JSON.stringify(workflows));
+            }
+            
+            return ok(updatedRequest);
         }
 
         function updateRequestStatus() {
@@ -1178,26 +1238,51 @@ export class FakeBackendInterceptor implements HttpInterceptor {
                 employeeId: typeof w.employeeId === 'string' ? parseInt(w.employeeId) : w.employeeId
             }));
             
-            // Filter out duplicate onboarding workflows and 'Request Status Update' workflows
+            // Filter out duplicate workflows
             const uniqueWorkflows = [];
             const seen = new Set();
             
             normalizedWorkflows.forEach(w => {
-                // Create a key based on type, employeeId, and departmentId (for onboarding)
-                const key = `${w.type}-${w.employeeId}-${w.details?.departmentId || ''}`;
+                // Create a key based on type, employeeId, and requestId (for requests)
+                let key = `${w.type}-${w.employeeId}`;
                 
-                // Skip Request Status Update workflows
+                // For requests, include the requestId in the key to ensure uniqueness
+                if (w.type === 'Request' && w.details?.requestId) {
+                    key += `-${w.details.requestId}`;
+                } else if (w.type === 'Onboarding') {
+                    // For onboarding, include departmentId if available
+                    key += `-${w.details?.departmentId || ''}`;
+                }
+                
+                // Skip Request Status Update workflows completely
                 if (w.type === 'Request Status Update') {
                     return;
                 }
                 
-                // For onboarding, only keep one per employee per department
-                if (w.type === 'Onboarding') {
-                    if (!seen.has(key)) {
-                        seen.add(key);
-                        uniqueWorkflows.push(w);
+                // Skip the basic "Request" type workflows, we only want to show the approval view
+                if (w.type === 'Request' && w.details?.message?.includes('New') && w.details?.message?.includes('created')) {
+                    return;
+                }
+                
+                // Check if we've seen this key before - only add if it's new
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    
+                    // For the Request Approval workflow, augment with more details
+                    if (w.type === 'Request') {
+                        // Find the corresponding request
+                        const request = requests.find(r => r.id === w.details?.requestId);
+                        if (request) {
+                            // Update the workflow type to distinguish it
+                            w.type = 'Request Approval';
+                            // Update details to show more information about the request
+                            w.details = {
+                                ...w.details,
+                                title: `Review ${request.type} request #${request.id} with ${request.items?.length || 0} items`
+                            };
+                        }
                     }
-                } else {
+                    
                     uniqueWorkflows.push(w);
                 }
             });
@@ -1246,10 +1331,21 @@ export class FakeBackendInterceptor implements HttpInterceptor {
                 }
                 
                 // Create a key based on type and departmentId (for onboarding)
-                const key = `${w.type}-${w.details?.departmentId || ''}`;
+                let key = `${w.type}`;
+                
+                if (w.type === 'Request' && w.details?.requestId) {
+                    key += `-${w.details.requestId}`;
+                } else if (w.type === 'Onboarding') {
+                    key += `-${w.details?.departmentId || ''}`;
+                }
                 
                 // Skip Request Status Update workflows
                 if (w.type === 'Request Status Update') {
+                    return;
+                }
+                
+                // Skip the basic "Request" type workflows, we only want to show the approval view
+                if (w.type === 'Request' && w.details?.message?.includes('New') && w.details?.message?.includes('created')) {
                     return;
                 }
                 
@@ -1260,6 +1356,21 @@ export class FakeBackendInterceptor implements HttpInterceptor {
                         uniqueWorkflows.push(w);
                     }
                 } else {
+                    // For the Request Approval workflow, augment with more details
+                    if (w.type === 'Request') {
+                        // Find the corresponding request
+                        const request = requests.find(r => r.id === w.details?.requestId);
+                        if (request) {
+                            // Update the workflow type to distinguish it
+                            w.type = 'Request Approval';
+                            // Update details to show more information about the request
+                            w.details = {
+                                ...w.details,
+                                title: `Review ${request.type} request #${request.id} with ${request.items?.length || 0} items`
+                            };
+                        }
+                    }
+                    
                     uniqueWorkflows.push(w);
                 }
             });
@@ -1393,14 +1504,33 @@ export class FakeBackendInterceptor implements HttpInterceptor {
             }
             
             // Handle Request workflows when approved
-            if (workflow.type === 'Request' && body.status === 'Approved' && oldStatus !== 'Approved' && workflow.details && workflow.details.requestId) {
+            if ((workflow.type === 'Request' || workflow.type === 'Request Approval') && body.status === 'Approved' && oldStatus !== 'Approved' && workflow.details && workflow.details.requestId) {
                 const requestId = workflow.details.requestId;
                 const requestIndex = requests.findIndex(r => r.id === requestId);
                 
                 if (requestIndex !== -1) {
+                    // Update the request status
                     requests[requestIndex].status = 'Approved';
                     requests[requestIndex].updatedAt = new Date().toISOString();
+                    
+                    // Also update the status of all items in the request
+                    if (requests[requestIndex].items && Array.isArray(requests[requestIndex].items)) {
+                        requests[requestIndex].items = requests[requestIndex].items.map(item => ({
+                            ...item,
+                            status: 'Approved'
+                        }));
+                    }
+                    
                     localStorage.setItem(requestsKey, JSON.stringify(requests));
+                    
+                    // Update the workflow details to include the latest items
+                    if (workflow.type === 'Request Approval') {
+                        workflow.details = {
+                            ...workflow.details,
+                            items: requests[requestIndex].items || []
+                        };
+                        localStorage.setItem(workflowsKey, JSON.stringify(workflows));
+                    }
                 }
             }
             

@@ -27,18 +27,20 @@
                                 from <strong>{{workflow.details?.oldDepartmentName}}</strong>
                             </span>
                         </span>
-                        <span *ngIf="workflow.type === 'Request Created'">
-                            {{workflow.details?.message || 'New request created'}}
+                        <span *ngIf="workflow.type === 'Request Approval'">
+                            {{workflow.details?.title || workflow.details?.message || 'Review request'}}
                             <div *ngIf="workflow.details?.items && workflow.details?.items.length" class="mt-2 small">
                                 <strong>Items:</strong>
                                 <ul class="list-unstyled ms-3 mb-0">
                                     <li *ngFor="let item of workflow.details?.items">
-                                        <i class="fas fa-box me-1"></i> {{item}}
+                                        <i class="fas fa-box me-1"></i> 
+                                        <span *ngIf="item.name">{{item.name}} ({{item.quantity || 1}})</span>
+                                        <span *ngIf="!item.name">{{item}}</span>
                                     </li>
                                 </ul>
                             </div>
                         </span>
-                        <span *ngIf="workflow.type !== 'Transfer' && workflow.type !== 'Request Created'">
+                        <span *ngIf="workflow.type !== 'Transfer' && workflow.type !== 'Request Approval' && workflow.type !== 'Request Created'">
                             {{workflow.details?.message || (workflow.details | json)}}
                         </span>
                     </td>

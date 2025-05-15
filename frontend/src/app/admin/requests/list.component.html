@@ -25,7 +25,7 @@
                 <tbody>
                     <tr *ngFor="let request of pagedRequests">
                         <td>{{request.type}}</td>
-                        <td>{{request.employee?.firstName}} {{request.employee?.lastName}}</td>
+                        <td>{{request.employee.email}}</td>
                         <td>
                             <div *ngIf="!request.items || request.items.length === 0" class="text-muted">
                                 No items found
