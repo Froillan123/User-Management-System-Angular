@@ -1,9 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { first } from 'rxjs/operators';
+import { first, switchMap, catchError } from 'rxjs/operators';
+import { of } from 'rxjs';
 
-import { EmployeeService, DepartmentService, AlertService } from '../../_services';
+import { EmployeeService, DepartmentService, AlertService, WorkflowService } from '../../_services';
 import { Department } from '../../_models/department';
 import { AccountService } from '../../_services/account.service';
 
@@ -26,7 +27,8 @@ export class AddEditComponent implements OnInit {
         private employeeService: EmployeeService,
         private departmentService: DepartmentService,
         private accountService: AccountService,
-        private alertService: AlertService
+        private alertService: AlertService,
+        private workflowService: WorkflowService
     ) {}
 
     ngOnInit() {
@@ -141,7 +143,39 @@ export class AddEditComponent implements OnInit {
         
         this.submitting = true;
         this.saveEmployee()
-            .pipe(first())
+            .pipe(
+                first(),
+                switchMap(employee => {
+                    // Only create workflow for new employees (not when editing)
+                    if (!this.id && employee) {
+                        // Get department name
+                        const departmentId = this.form.get('departmentId')?.value;
+                        const department = this.departments.find(d => d.id == departmentId);
+                        const departmentName = department ? department.name : 'Unknown Department';
+                        
+                        // Create onboarding workflow
+                        return this.workflowService.create({
+                            employeeId: employee.id,
+                            type: 'Onboarding',
+                            details: {
+                                message: `Added to ${departmentName}`,
+                                departmentId: departmentId,
+                                departmentName: departmentName
+                            },
+                            status: 'Completed'
+                        }).pipe(
+                            // Return employee to maintain the flow
+                            switchMap(() => of(employee)),
+                            catchError(error => {
+                                console.error('Error creating onboarding workflow:', error);
+                                // Continue the flow even if workflow creation fails
+                                return of(employee);
+                            })
+                        );
+                    }
+                    return of(employee);
+                })
+            )
             .subscribe({
                 next: () => {
                     this.alertService.success('Employee saved successfully', { keepAfterRouteChange: true });
