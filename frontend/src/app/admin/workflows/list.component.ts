@@ -30,7 +30,8 @@ export class ListComponent implements OnInit {
             .pipe(first())
             .subscribe({
                 next: workflows => {
-                    this.workflows = workflows;
+                    // Filter out 'Request Status Update' workflow types
+                    this.workflows = workflows.filter(w => w.type !== 'Request Status Update');
                     this.loadEmployeeDetails();
                 },
                 error: error => {

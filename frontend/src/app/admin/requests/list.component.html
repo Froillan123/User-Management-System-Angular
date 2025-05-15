@@ -42,8 +42,8 @@
                             </span>
                         </td>
                         <td>
-                            <!-- Only show actions if request is not approved -->
-                            <div *ngIf="request.status !== 'Approved'">
+                            <!-- Only show actions if request is not approved or rejected -->
+                            <div *ngIf="request.status !== 'Approved' && request.status !== 'Rejected'">
                                 <a routerLink="edit/{{request.id}}" class="btn btn-sm btn-primary me-1">Edit</a>
                                 <button (click)="deleteRequest(request.id)" class="btn btn-sm btn-danger" 
                                     [disabled]="request.isDeleting">
@@ -51,7 +51,7 @@
                                     <span *ngIf="!request.isDeleting">Delete</span>
                                 </button>
                             </div>
-                            <span *ngIf="request.status === 'Approved'" class="text-muted small">
+                            <span *ngIf="request.status === 'Approved' || request.status === 'Rejected'" class="text-muted small">
                                 No actions available
                             </span>
                         </td>

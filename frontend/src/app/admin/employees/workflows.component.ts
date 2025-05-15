@@ -54,8 +54,11 @@ export class WorkflowsComponent implements OnInit {
             .pipe(first())
             .subscribe({
                 next: workflows => {
-                    // Filter out 'Request Created' workflow types per user request
-                    this.workflows = workflows.filter(w => w.type !== 'Request Created');
+                    // Filter out 'Request Created' and 'Request Status Update' workflow types per user request
+                    this.workflows = workflows.filter(w => 
+                        w.type !== 'Request Created' && 
+                        w.type !== 'Request Status Update'
+                    );
                     this.totalPages = Math.ceil(this.workflows.length / this.pageSize);
                     this.setPage(0);
                     this.loading = false;

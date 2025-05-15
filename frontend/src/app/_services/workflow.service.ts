@@ -75,4 +75,12 @@ export class WorkflowService {
             map(workflows => workflows.filter(w => w.details?.requestId === requestId))
         );
     }
+    
+    delete(id: number): Observable<any> {
+        return this.http.delete(`${baseUrl}/workflows/${id}`, this.getHttpOptions())
+            .pipe(catchError(error => {
+                console.error('Error deleting workflow:', error);
+                return throwError(() => new Error(error.message || 'Failed to delete workflow'));
+            }));
+    }
 }
