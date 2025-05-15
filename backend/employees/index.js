@@ -104,7 +104,8 @@ async function getUsers(req, res, next) {
     try {
         // Get all accounts that can be assigned to employees
         const users = await db.Account.findAll({
-            attributes: ['id', 'email', 'firstName', 'lastName', 'role']
+            attributes: ['id', 'email', 'firstName', 'lastName', 'role'],
+            where: { status: 'Active' }
         });
         res.json(users);
     } catch (err) { next(err); }
