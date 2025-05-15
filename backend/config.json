@@ -1,0 +1,48 @@
+{
+  "development": {
+    "database": {
+      "url": "postgresql://postgres:AsdpBxWNoEVqntFvhUVKEdqIbFKgAzxq@shinkansen.proxy.rlwy.net:34902/railway"
+    },
+    "secret": "STARTTLS_DEV_SECRET",
+    "emailFrom": "froillan.edem@gmail.com",
+    "smtpOptions": {
+      "host": "smtp.gmail.com",
+      "port": 465,
+      "secure": true,
+      "auth": {
+        "user": "froillan.edem@gmail.com",
+        "pass": "dgzy rvyz prks zslp"
+      },
+      "tls": {
+        "rejectUnauthorized": false
+      },
+      "debug": true,
+      "logger": true,
+      "disableFileAccess": true,
+      "disableUrlAccess": true
+    }
+  },
+  "production": {
+    "database": {
+      "url": "postgresql://postgres:AsdpBxWNoEVqntFvhUVKEdqIbFKgAzxq@shinkansen.proxy.rlwy.net:34902/railway"
+    },
+    "secret": "STARTTLS",
+    "emailFrom": "froillan.edem@gmail.com",
+    "smtpOptions": {
+      "host": "smtp.gmail.com",
+      "port": 465,
+      "secure": true,
+      "auth": {
+        "user": "froillan.edem@gmail.com",
+        "pass": "dgzy rvyz prks zslp"
+      },
+      "tls": {
+        "rejectUnauthorized": false
+      },
+      "debug": true,
+      "logger": true,
+      "disableFileAccess": true,
+      "disableUrlAccess": true
+    }
+  }
+}
