@@ -1,0 +1,72 @@
+<h1>{{title}}</h1>
+<div class="card">
+    <div class="card-header">{{title}}</div>
+    <div class="card-body">
+        <div *ngIf="errorMessage" class="alert alert-danger">{{errorMessage}}</div>
+        <form *ngIf="!loading" [formGroup]="form" (ngSubmit)="onSubmit()">
+            <!-- Employee ID is auto-generated and not editable -->
+            <div class="mb-3" *ngIf="id">
+                <label class="form-label">Employee ID</label>
+                <input type="text" formControlName="employeeId" class="form-control" readonly />
+                <small class="form-text text-muted">Employee ID is automatically generated and cannot be changed</small>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Account</label>
+                <select formControlName="accountId" (change)="onAccountChange()" class="form-select" [ngClass]="{ 'is-invalid': submitted && f.accountId.errors }">
+                    <option [ngValue]="null">Select Account (Optional)</option>
+                    <option *ngFor="let user of users" [ngValue]="user.id">{{user.email}} ({{user.firstName}} {{user.lastName}})</option>
+                </select>
+                <div *ngIf="submitted && f.accountId.errors" class="invalid-feedback">
+                    <div *ngIf="f.accountId.errors.duplicate">This account is already linked to an employee record</div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Position</label>
+                <input type="text" formControlName="position" class="form-control" [ngClass]="{ 'is-invalid': submitted && f.position.errors }" />
+                <div *ngIf="submitted && f.position.errors" class="invalid-feedback">
+                    <div *ngIf="f.position.errors.required">Position is required</div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Department</label>
+                <select formControlName="departmentId" class="form-select" [ngClass]="{ 'is-invalid': submitted && f.departmentId.errors }">
+                    <option value="">Select Department</option>
+                    <option *ngFor="let dept of departments" [value]="dept.id">{{dept.name}}</option>
+                </select>
+                <div *ngIf="submitted && f.departmentId.errors" class="invalid-feedback">
+                    <div *ngIf="f.departmentId.errors.required">Department is required</div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Hire Date</label>
+                <input type="date" formControlName="hireDate" class="form-control" [ngClass]="{ 'is-invalid': submitted && f.hireDate.errors }" />
+                <div *ngIf="submitted && f.hireDate.errors" class="invalid-feedback">
+                    <div *ngIf="f.hireDate.errors.required">Hire Date is required</div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Status</label>
+                <select formControlName="status" class="form-select">
+                    <option>Active</option>
+                    <option>Inactive</option>
+                </select>
+            </div>
+
+            <div class="text-center">
+                <button [disabled]="submitting" class="btn btn-primary me-2">
+                    <span *ngIf="submitting" class="spinner-border spinner-border-sm me-1"></span>
+                    Save
+                </button>
+                <button type="button" (click)="onCancel()" class="btn btn-secondary">Cancel</button>
+            </div>
+        </form>
+        <div *ngIf="loading" class="text-center">
+            <span class="spinner-border spinner-border-lg align-center"></span>
+        </div>
+    </div>
+</div> 

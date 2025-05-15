@@ -1,0 +1,54 @@
+<h1>Transfer Request</h1>
+<div class="card shadow-sm" *ngIf="employee">
+    <div class="card-header bg-white py-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <span class="badge bg-primary me-2">{{employee.employeeId}}</span>
+                {{employee.firstName}} {{employee.lastName}}
+            </h5>
+            <div class="text-muted">
+                Current Department: <strong>{{employee.department?.name || 'None'}}</strong>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info mb-4">
+            <i class="fas fa-info-circle me-2"></i>
+            Transfer requests require approval in the workflow system before they will be processed. After submission, go to the Workflows page to approve or reject the request.
+        </div>
+        
+        <form *ngIf="!loading" [formGroup]="form" (ngSubmit)="onSubmit()">
+            <div class="row mb-4">
+                <label class="col-md-3 col-form-label">New Department</label>
+                <div class="col-md-6">
+                    <select formControlName="departmentId" class="form-select" 
+                        [ngClass]="{ 'is-invalid': submitted && f.departmentId.errors }">
+                        <option value="">Select Department</option>
+                        <option *ngFor="let department of departments" [value]="department.id" [disabled]="department.id === employee.departmentId">
+                            {{department.name}} {{department.id === employee.departmentId ? '(Current)' : ''}}
+                        </option>
+                    </select>
+                    <div *ngIf="submitted && f.departmentId.errors" class="invalid-feedback">
+                        <div *ngIf="f.departmentId.errors.required">Department is required</div>
+                    </div>
+                    <div class="form-text mt-2">
+                        Select the department you want to transfer this employee to
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-9 offset-md-3">
+                    <button [disabled]="submitting" class="btn btn-primary">
+                        <span *ngIf="submitting" class="spinner-border spinner-border-sm me-1"></span>
+                        Submit Transfer Request
+                    </button>
+                    <a routerLink="/admin/employees" class="btn btn-link">Cancel</a>
+                </div>
+            </div>
+        </form>
+        <div *ngIf="loading" class="text-center p-5">
+            <span class="spinner-border spinner-border-lg text-primary"></span>
+            <div class="mt-3">Loading employee data...</div>
+        </div>
+    </div>
+</div> 

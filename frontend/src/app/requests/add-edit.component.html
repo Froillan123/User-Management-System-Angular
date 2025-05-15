@@ -1,0 +1,91 @@
+<h1>{{title}}</h1>
+<div class="card">
+    <div class="card-body">
+        <form *ngIf="!loading" [formGroup]="form" (ngSubmit)="onSubmit()">
+            <div class="row mb-3">
+                <label class="col-md-3 col-form-label">Type</label>
+                <div class="col-md-9">
+                    <select formControlName="type" class="form-select" 
+                        [ngClass]="{ 'is-invalid': submitted && f.type.errors }">
+                        <option value="">Select Type</option>
+                        <option value="Resources">Resources</option>
+                        <option value="Equipment">Equipment</option>
+                        <option value="Support">Support</option>
+                        <option value="Others">Others</option>
+                    </select>
+                    <div *ngIf="submitted && f.type.errors" class="invalid-feedback">
+                        <div *ngIf="f.type.errors.required">Type is required</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <label class="col-md-3 col-form-label">Description</label>
+                <div class="col-md-9">
+                    <textarea formControlName="description" class="form-control" rows="3"></textarea>
+                </div>
+            </div>
+            
+            <h3 class="mt-4">Request Items</h3>
+            <button type="button" class="btn btn-sm btn-secondary mb-3" (click)="addItem()">
+                <i class="fas fa-plus"></i> Add Item
+            </button>
+            
+            <div formArrayName="items" class="mb-3">
+                <div *ngFor="let itemForm of itemsFormArray.controls; let i = index" [formGroupName]="i" class="card mb-3">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Item {{i + 1}}</h5>
+                        <button type="button" class="btn btn-sm btn-danger" (click)="removeItem(i)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <label class="col-md-3 col-form-label">Name</label>
+                            <div class="col-md-9">
+                                <input type="text" formControlName="name" class="form-control" 
+                                    [ngClass]="{ 'is-invalid': submitted && itemsFormArray.at(i).get('name')?.errors }" />
+                                <div *ngIf="submitted && itemsFormArray.at(i).get('name')?.errors" class="invalid-feedback">
+                                    <div *ngIf="itemsFormArray.at(i).get('name')?.errors?.required">Name is required</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label class="col-md-3 col-form-label">Quantity</label>
+                            <div class="col-md-9">
+                                <input type="number" formControlName="quantity" class="form-control" min="1" 
+                                    [ngClass]="{ 'is-invalid': submitted && itemsFormArray.at(i).get('quantity')?.errors }" />
+                                <div *ngIf="submitted && itemsFormArray.at(i).get('quantity')?.errors" class="invalid-feedback">
+                                    <div *ngIf="itemsFormArray.at(i).get('quantity')?.errors?.required">Quantity is required</div>
+                                    <div *ngIf="itemsFormArray.at(i).get('quantity')?.errors?.min">Quantity must be at least 1</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label class="col-md-3 col-form-label">Description</label>
+                            <div class="col-md-9">
+                                <textarea formControlName="description" class="form-control" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div *ngIf="itemsFormArray.controls.length === 0" class="alert alert-info">
+                    No items added yet. Click "Add Item" to add request items.
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-9 offset-md-3">
+                    <button [disabled]="submitting" class="btn btn-primary">
+                        <span *ngIf="submitting" class="spinner-border spinner-border-sm me-1"></span>
+                        Save
+                    </button>
+                    <a routerLink="/requests" class="btn btn-link">Cancel</a>
+                </div>
+            </div>
+        </form>
+        <div *ngIf="loading" class="text-center">
+            <span class="spinner-border spinner-border-lg align-center"></span>
+        </div>
+    </div>
+</div> 

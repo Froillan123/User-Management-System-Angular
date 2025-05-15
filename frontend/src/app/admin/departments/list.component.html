@@ -1,0 +1,65 @@
+<div class="card">
+    <div class="card-header">DEPARTMENTS</div>
+    <div class="card-body">
+        <div *ngIf="loading" class="text-center p-3">
+            <div class="spinner-border spinner-border-sm"></div>
+            <span class="ms-2">Loading departments...</span>
+        </div>
+        
+        <div *ngIf="!loading && departments.length === 0" class="text-center p-3">
+            <p class="mb-3">No departments found</p>
+            <a routerLink="add" class="btn btn-primary">Add Department</a>
+        </div>
+        
+        <div *ngIf="!loading && departments.length > 0">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Employee Count</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let department of pagedDepartments">
+                        <td>{{department.name}}</td>
+                        <td>{{department.description}}</td>
+                        <td>{{department.employeeCount || 0}}</td>
+                        <td>
+                            <a routerLink="edit/{{department.id}}" class="btn btn-sm btn-primary me-1">Edit</a>
+                            <button (click)="deleteDepartment(department.id)" class="btn btn-sm btn-danger" 
+                                [disabled]="department.isDeleting">
+                                <span *ngIf="department.isDeleting" class="spinner-border spinner-border-sm"></span>
+                                <span *ngIf="!department.isDeleting">Delete</span>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <!-- Pagination controls -->
+            <div class="d-flex justify-content-between align-items-center mt-3">
+                <div>
+                    <span class="me-2">Page {{currentPage + 1}} of {{totalPages}}</span>
+                    <span class="text-muted small">({{departments.length}} total departments)</span>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary me-1" 
+                            (click)="setPage(currentPage - 1)"
+                            [disabled]="currentPage === 0">
+                        Previous
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" 
+                            (click)="setPage(currentPage + 1)"
+                            [disabled]="currentPage === totalPages - 1">
+                        Next
+                    </button>
+                </div>
+                <div>
+                    <a routerLink="add" class="btn btn-primary">Add Department</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 

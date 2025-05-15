@@ -1,0 +1,182 @@
+<div class="card-body p-4">
+    <div class="text-center mb-4">
+        <h2>Create Account</h2>
+        <p class="text-muted">Complete these steps to get started</p>
+    </div>
+
+    <!-- Step Indicator -->
+    <div class="step-indicator">
+        <div class="step-connector"></div>
+        <div class="step mx-3" [ngClass]="{'active': currentStep === 1, 'completed': currentStep > 1}">
+            <div class="step-number">
+                <span *ngIf="currentStep <= 1">1</span>
+                <i *ngIf="currentStep > 1" class="fas fa-check"></i>
+            </div>
+            <div class="step-title">Account Info</div>
+        </div>
+        <div class="step mx-3" [ngClass]="{'active': currentStep === 2, 'completed': currentStep > 2}">
+            <div class="step-number">
+                <span *ngIf="currentStep <= 2">2</span>
+                <i *ngIf="currentStep > 2" class="fas fa-check"></i>
+            </div>
+            <div class="step-title">Authentication</div>
+        </div>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <!-- Step 1: Account Info -->
+        <div *ngIf="currentStep === 1" class="step-content fade-in">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label class="form-label">Title</label>
+                        <select formControlName="title" class="form-select" [ngClass]="{ 'is-invalid': (submitted || isFieldInvalid('title')) && f.title.errors }">
+                            <option value="">Select title</option>
+                            <option value="Mr">Mr</option>
+                            <option value="Mrs">Mrs</option>
+                            <option value="Miss">Miss</option>
+                            <option value="Ms">Ms</option>
+                        </select>
+                        <div *ngIf="(submitted || isFieldInvalid('title')) && f.title.errors" class="invalid-feedback">
+                            <div *ngIf="f.title.errors.required">Title is required</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label class="form-label">First Name</label>
+                        <input type="text" formControlName="firstName" class="form-control" [ngClass]="{ 'is-invalid': (submitted || isFieldInvalid('firstName')) && f.firstName.errors }" placeholder="Enter your first name" />
+                        <div *ngIf="(submitted || isFieldInvalid('firstName')) && f.firstName.errors" class="invalid-feedback">
+                            <div *ngIf="f.firstName.errors.required">First Name is required</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label class="form-label">Last Name</label>
+                        <input type="text" formControlName="lastName" class="form-control" [ngClass]="{ 'is-invalid': (submitted || isFieldInvalid('lastName')) && f.lastName.errors }" placeholder="Enter your last name" />
+                        <div *ngIf="(submitted || isFieldInvalid('lastName')) && f.lastName.errors" class="invalid-feedback">
+                            <div *ngIf="f.lastName.errors.required">Last Name is required</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Authentication -->
+        <div *ngIf="currentStep === 2" class="step-content fade-in">
+            <div class="form-group mb-3">
+                <label class="form-label">Email</label>
+                <input type="text" formControlName="email" class="form-control" [ngClass]="{ 'is-invalid': (submitted || isFieldInvalid('email')) && f.email.errors }" placeholder="Enter your email" />
+                <div *ngIf="(submitted || isFieldInvalid('email')) && f.email.errors" class="invalid-feedback">
+                    <div *ngIf="f.email.errors.required">Email is required</div>
+                    <div *ngIf="f.email.errors.email">Email is invalid</div>
+                    <div *ngIf="f.email.errors.alreadyRegistered">
+                        <strong><i class="fas fa-exclamation-circle"></i> Email is already registered</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label class="form-label">Password</label>
+                        <input type="password" formControlName="password" class="form-control" [ngClass]="{ 'is-invalid': (submitted || isFieldInvalid('password')) && f.password.errors }" placeholder="Create a password" />
+                        <div *ngIf="(submitted || isFieldInvalid('password')) && f.password.errors" class="invalid-feedback">
+                            <div *ngIf="f.password.errors.required">Password is required</div>
+                            <div *ngIf="f.password.errors.minlength">Password must be at least 6 characters</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label class="form-label">Confirm Password</label>
+                        <input type="password" formControlName="confirmPassword" class="form-control" [ngClass]="{ 'is-invalid': (submitted || isFieldInvalid('confirmPassword')) && f.confirmPassword.errors }" placeholder="Confirm your password" />
+                        <div *ngIf="(submitted || isFieldInvalid('confirmPassword')) && f.confirmPassword.errors" class="invalid-feedback">
+                            <div *ngIf="f.confirmPassword.errors.required">Confirm Password is required</div>
+                            <div *ngIf="f.confirmPassword.errors.mustMatch">Passwords must match</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group mb-3">
+                <div class="form-check">
+                    <input type="checkbox" formControlName="acceptTerms" id="acceptTerms" class="form-check-input" [ngClass]="{ 'is-invalid': (submitted || isFieldInvalid('acceptTerms')) && f.acceptTerms.errors }" />
+                    <label for="acceptTerms" class="form-check-label">
+                        I accept the <a href="javascript:void(0)" (click)="openTermsModal()" class="text-primary">Terms of Service</a> and <a href="javascript:void(0)" (click)="openTermsModal()" class="text-primary">Privacy Policy</a>
+                    </label>
+                    <div *ngIf="(submitted || isFieldInvalid('acceptTerms')) && f.acceptTerms.errors" class="invalid-feedback">
+                        <div *ngIf="f.acceptTerms.errors.required">You must accept the terms to continue</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step Navigation -->
+        <div class="step-actions">
+            <button type="button" *ngIf="currentStep > 1" (click)="prevStep()" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Previous
+            </button>
+            <div *ngIf="currentStep === 1" class="invisible">
+                <button type="button" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i> Previous
+                </button>
+            </div>
+            <button *ngIf="currentStep < totalSteps" type="button" (click)="nextStep()" class="btn btn-primary">
+                Next <i class="fas fa-arrow-right ms-1"></i>
+            </button>
+            <button *ngIf="currentStep === totalSteps" type="submit" [disabled]="loading" class="btn btn-success">
+                <span *ngIf="loading" class="spinner-border spinner-border-sm me-1"></span>
+                Register
+            </button>
+        </div>
+
+        <div class="text-center mt-4">
+            <p class="mb-0">Already have an account? <a routerLink="../login" class="text-primary">Sign in</a></p>
+        </div>
+    </form>
+
+    <!-- Terms and Conditions Modal -->
+    <div *ngIf="showTermsModal" class="terms-modal-backdrop" (click)="closeTermsModal()">
+        <div class="terms-modal" (click)="$event.stopPropagation()">
+            <div class="terms-modal-header">
+                <h4 class="terms-modal-title">Terms and Conditions</h4>
+                <button type="button" class="btn-close" (click)="closeTermsModal()"></button>
+            </div>
+            <div class="terms-modal-body">
+                <h5>1. Acceptance of Terms</h5>
+                <p>By accessing and using this service, you accept and agree to be bound by the terms and provision of this agreement.</p>
+                
+                <h5>2. User Account</h5>
+                <p>To use our service, you may be required to create an account. You are responsible for maintaining the confidentiality of your account information and password.</p>
+                
+                <h5>3. Privacy Policy</h5>
+                <p>Your use of our service is also governed by our Privacy Policy, which is incorporated by reference into these Terms of Service.</p>
+                
+                <h5>4. User Responsibilities</h5>
+                <p>You are responsible for all content and activity on your account. You agree not to use our service for any illegal or unauthorized purpose.</p>
+                
+                <h5>5. Data Security</h5>
+                <p>We implement a variety of security measures to maintain the safety of your personal information when you enter, submit, or access your personal information.</p>
+                
+                <h5>6. Termination</h5>
+                <p>We may terminate or suspend your account and bar access to the service immediately, without prior notice or liability, for any reason whatsoever.</p>
+                
+                <h5>7. Intellectual Property</h5>
+                <p>The service and its original content, features and functionality are and will remain the exclusive property of our company.</p>
+                
+                <h5>8. Governing Law</h5>
+                <p>These Terms shall be governed and construed in accordance with the laws, without regard to its conflict of law provisions.</p>
+            </div>
+            <div class="terms-modal-footer">
+                <button type="button" class="btn btn-primary" (click)="closeTermsModal()">I Understand</button>
+            </div>
+        </div>
+    </div>
+</div>
