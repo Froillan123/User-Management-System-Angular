@@ -159,34 +159,88 @@ async function update(req, res, next) {
 }
 
 async function _delete(req, res, next) {
+    let t;
+    
     try {
+        t = await db.sequelize.transaction(); // Start a transaction
+        
         const employee = await db.Employee.findByPk(req.params.id);
-        if (!employee) throw new Error('Employee not found');
+        if (!employee) {
+            return res.status(404).json({ message: 'Employee not found' });
+        }
         
         // Check if employee has a linked account
         if (employee.accountId) {
-            throw new Error('Cannot delete employee with a linked account. Please unlink the account first.');
+            return res.status(400).json({
+                message: 'Cannot delete employee with a linked account. Please unlink the account first.',
+                code: 'EMPLOYEE_HAS_ACCOUNT'
+            });
         }
         
         // Check if employee has any requests
         const hasRequests = await db.Request.findOne({ where: { employeeId: employee.id } });
         if (hasRequests) {
-            throw new Error('Cannot delete employee with existing requests. Please delete requests first.');
+            return res.status(400).json({
+                message: 'Cannot delete employee with existing requests. Please delete requests first.',
+                code: 'EMPLOYEE_HAS_REQUESTS'
+            });
         }
         
         // Check if employee is a department manager
         const isDepartmentManager = await db.Department.findOne({ where: { managerId: employee.id } });
         if (isDepartmentManager) {
-            throw new Error('Cannot delete employee who is a department manager. Please assign a new manager first.');
+            return res.status(400).json({
+                message: 'Cannot delete employee who is a department manager. Please assign a new manager first.',
+                code: 'EMPLOYEE_IS_MANAGER'
+            });
         }
         
-        // Delete any workflows associated with this employee
-        await db.Workflow.destroy({ where: { employeeId: employee.id } });
+        // Check if employee is referenced in workflow details
+        const referencingWorkflows = await db.Workflow.findAll({
+            where: db.sequelize.literal(`details->>'requesterId' = '${employee.id}'`)
+        });
+
+        if (referencingWorkflows.length > 0) {
+            return res.status(400).json({
+                message: 'Cannot delete employee who is referenced in workflow details. Please delete associated workflows first.',
+                code: 'EMPLOYEE_REFERENCED_IN_WORKFLOWS'
+            });
+        }
         
-        // Now delete the employee
-        await employee.destroy();
-        res.json({ message: 'Employee deleted successfully' });
-    } catch (err) { next(err); }
+        try {
+            // Delete any workflows associated with this employee
+            await db.Workflow.destroy({ 
+                where: { employeeId: employee.id },
+                transaction: t
+            });
+            
+            // Now delete the employee
+            await employee.destroy({ transaction: t });
+            
+            // Commit the transaction
+            await t.commit();
+            
+            return res.json({ message: 'Employee deleted successfully' });
+        } catch (deleteError) {
+            // Rollback the transaction if there was an error during deletion
+            if (t) await t.rollback();
+            
+            console.error('Error deleting employee:', deleteError);
+            return res.status(500).json({ 
+                message: 'Error deleting employee. Database operation failed.',
+                error: deleteError.message
+            });
+        }
+    } catch (err) {
+        // Rollback the transaction if there was an error during checks
+        if (t) await t.rollback();
+        
+        console.error('Unexpected error:', err);
+        return res.status(500).json({ 
+            message: 'An unexpected error occurred',
+            error: err.message
+        });
+    }
 }
 
 async function transfer(req, res, next) {

@@ -1118,7 +1118,7 @@ export class FakeBackendInterceptor implements HttpInterceptor {
             updatedRequest.updatedAt = new Date().toISOString();
             
             // Save the updated request
-            requests[requestIndex] = updatedRequest;
+                requests[requestIndex] = updatedRequest;
             localStorage.setItem(requestsKey, JSON.stringify(requests));
             
             // Update related workflows
@@ -1265,8 +1265,8 @@ export class FakeBackendInterceptor implements HttpInterceptor {
                 }
                 
                 // Check if we've seen this key before - only add if it's new
-                if (!seen.has(key)) {
-                    seen.add(key);
+                    if (!seen.has(key)) {
+                        seen.add(key);
                     
                     // For the Request Approval workflow, augment with more details
                     if (w.type === 'Request') {

@@ -25,6 +25,9 @@ async function initialize() {
             logging: console.log // Enable to see SQL queries
         });
 
+        // Add sequelize instance to db object for transactions
+        db.sequelize = sequelize;
+        
         // Initialize models
         db.Account = require('../accounts/account.model')(sequelize);
         db.RefreshToken = require('../accounts/refresh-token.model')(sequelize);
