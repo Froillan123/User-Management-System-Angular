@@ -46,6 +46,12 @@
                                 </a>
                                 <a routerLink="transfer/{{employee.id}}" class="btn btn-sm btn-warning me-1">Transfer</a>
                                 <a routerLink="edit/{{employee.id}}" class="btn btn-sm btn-primary me-1">Edit</a>
+                                <button (click)="deleteEmployee(employee.id)" class="btn btn-sm btn-danger" 
+                                        [disabled]="employee.isDeleting">
+                                    <span *ngIf="employee.isDeleting" class="spinner-border spinner-border-sm me-1"></span>
+                                    <i *ngIf="!employee.isDeleting" class="fas fa-trash-alt me-1"></i>
+                                    Delete
+                                </button>
                             </div>
                         </td>
                     </tr>
