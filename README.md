@@ -2,6 +2,11 @@
 
 <div align="center">
 
+Edem Branch
+
+frontend- https://user-management-system-angular.vercel.app
+backend- https://user-management-system-angular.onrender.com
+
 ![User Management System](frontend/src/assets/images/favico.png)
 
 A full-stack application for managing user accounts with advanced features and security.
@@ -118,12 +123,6 @@ A full-stack application for managing user accounts with advanced features and s
 
 ## ⚙️ Configuration
 
-### Environment Setup
-1. Copy the example environment file:
-   ```bash
-   cp backend/.env.example backend/.env
-   ```
-
 
 ### Email Configuration
 1. Go to your Google Account settings
@@ -137,8 +136,8 @@ A full-stack application for managing user accounts with advanced features and s
 ### Database Configuration
 1. Connect to the PostgreSQL database on Railway:
    ```bash
-   psql -h shinkansen.proxy.rlwy.net -U postgres -p 34902 -d railway
-   # Password: AsdpBxWNoEVqntFvhUVKEdqIbFKgAzxq
+   psql -h shuttle.proxy.rlwy.net -U postgres -p 17276 -d railway
+   # Password: tldSyjLsJlErJdwBkKMnPskMDdtONPhV
    ```
 
 2. If the `psql` command is not available, install PostgreSQL:
