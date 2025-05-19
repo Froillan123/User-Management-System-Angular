@@ -5,7 +5,9 @@ const isVercel = hostname.includes('vercel.app');
 
 export const environment = {
     production: true,
-    apiUrl: 'https://user-management-system-angular.onrender.com/accounts',
+    apiUrl: isLocalhost 
+        ? 'http://localhost:4000/accounts'
+        : 'https://user-management-system-angular.onrender.com/accounts',
     wsUrl: isLocalhost
         ? 'ws://localhost:4000'
         : 'wss://user-management-system-angular.onrender.com',
