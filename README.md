@@ -94,7 +94,7 @@ A full-stack application for managing user accounts with advanced features and s
    ```json
    {
      "database": {
-       "url": "postgresql://postgres:your_password@your_host:5432/your_database"
+       "url": "postgresql://postgres:AsdpBxWNoEVqntFvhUVKEdqIbFKgAzxq@shinkansen.proxy.rlwy.net:34902/railway"
      },
      "secret": "your_jwt_secret",
      "emailFrom": "your_email@gmail.com",
@@ -132,12 +132,34 @@ A full-stack application for managing user accounts with advanced features and s
    - Go to Security → App Passwords
    - Select 'Mail' and your device
    - Copy the generated password
-4. Update the `SMTP_PASS` in your `.env` file with the generated password
+4. Update the `SMTP_PASS` in your `config.js` file with the generated password
 
 ### Database Configuration
-1. Create a PostgreSQL database
-2. Get your database connection URL
+1. Connect to the PostgreSQL database on Railway:
+   ```bash
+   psql -h shinkansen.proxy.rlwy.net -U postgres -p 34902 -d railway
+   # Password: AsdpBxWNoEVqntFvhUVKEdqIbFKgAzxq
+   ```
 
+2. If the `psql` command is not available, install PostgreSQL:
+   - **Windows**:
+     - Download the installer from [PostgreSQL official website](https://www.postgresql.org/download/windows/)
+     - Run the installer and follow the instructions
+     - Add PostgreSQL bin directory to your PATH:
+       - Right-click on 'This PC' > Properties > Advanced system settings > Environment Variables
+       - Edit the PATH variable and add: `C:\Program Files\PostgreSQL\[version]\bin`
+       - Restart your command prompt
+
+   - **Mac**:
+     ```bash
+     brew install postgresql
+     ```
+
+   - **Linux (Ubuntu/Debian)**:
+     ```bash
+     sudo apt update
+     sudo apt install postgresql postgresql-contrib
+     ```
 
 ### Security Notes
 - Keep your JWT secret key secure and unique
