@@ -2,10 +2,10 @@
 
 <div align="center">
 
-Villarta Branch
+Lopez Branch
 
-frontend- https://user-management-system-angular-maverick.vercel.app
-backend- https://user-management-system-angular-maverick.onrender.com
+frontend- https://user-management-system-angular-lopez.vercel.app
+backend- https://user-management-system-angular-lopez.onrender.com
 
 ![User Management System](frontend/src/assets/images/favico.png)
 
@@ -97,22 +97,60 @@ A full-stack application for managing user accounts with advanced features and s
 
    Create `config.json`:
    ```json
-   {
-     "database": {
-       "url": "postgresql://postgres:AsdpBxWNoEVqntFvhUVKEdqIbFKgAzxq@shinkansen.proxy.rlwy.net:34902/railway"
-     },
-     "secret": "your_jwt_secret",
-     "emailFrom": "your_email@gmail.com",
-     "smtpOptions": {
-       "host": "smtp.gmail.com", 
-       "port": 465,
-       "secure": true,
-       "auth": {
-         "user": "your_email@gmail.com",
-         "pass": "your_app_password in gmail"
-       }
-     }
-   }
+  "development": {
+    "database": {
+      "host": "153.92.15.31",
+      "user": "u875409848_lopez",
+      "password": "9T2Z5$3UKkgSYzE",
+      "database": "u875409848_lopez",
+      "dialect": "mysql"
+    },
+    "secret": "STARTTLS_DEV_SECRET",
+    "emailFrom": "froillan.edem@gmail.com",
+    "smtpOptions": {
+      "host": "smtp.gmail.com",
+      "port": 465,
+      "secure": true,
+      "auth": {
+        "user": "froillan.edem@gmail.com",
+        "pass": "dgzy rvyz prks zslp"
+      },
+      "tls": {
+        "rejectUnauthorized": false
+      },
+      "debug": true,
+      "logger": true,
+      "disableFileAccess": true,
+      "disableUrlAccess": true
+    }
+  },
+  "production": {
+    "database": {
+      "host": "153.92.15.31",
+      "user": "u875409848_lopez",
+      "password": "9T2Z5$3UKkgSYzE",
+      "database": "u875409848_lopez",
+      "dialect": "mysql"
+    },
+    "secret": "STARTTLS",
+    "emailFrom": "froillan.edem@gmail.com",
+    "smtpOptions": {
+      "host": "smtp.gmail.com",
+      "port": 465,
+      "secure": true,
+      "auth": {
+        "user": "froillan.edem@gmail.com",
+        "pass": "dgzy rvyz prks zslp"
+      },
+      "tls": {
+        "rejectUnauthorized": false
+      },
+      "debug": true,
+      "logger": true,
+      "disableFileAccess": true,
+      "disableUrlAccess": true
+    }
+  }
    ```
 
 3. **Frontend Setup**
@@ -133,32 +171,6 @@ A full-stack application for managing user accounts with advanced features and s
    - Copy the generated password
 4. Update the `SMTP_PASS` in your `config.js` file with the generated password
 
-### Database Configuration
-1. Connect to the PostgreSQL database on Railway:
-   ```bash
-   psql -h shuttle.proxy.rlwy.net -U postgres -p 17276 -d railway
-   # Password: tldSyjLsJlErJdwBkKMnPskMDdtONPhV
-   ```
-
-2. If the `psql` command is not available, install PostgreSQL:
-   - **Windows**:
-     - Download the installer from [PostgreSQL official website](https://www.postgresql.org/download/windows/)
-     - Run the installer and follow the instructions
-     - Add PostgreSQL bin directory to your PATH:
-       - Right-click on 'This PC' > Properties > Advanced system settings > Environment Variables
-       - Edit the PATH variable and add: `C:\Program Files\PostgreSQL\[version]\bin`
-       - Restart your command prompt
-
-   - **Mac**:
-     ```bash
-     brew install postgresql
-     ```
-
-   - **Linux (Ubuntu/Debian)**:
-     ```bash
-     sudo apt update
-     sudo apt install postgresql postgresql-contrib
-     ```
 
 ### Security Notes
 - Keep your JWT secret key secure and unique

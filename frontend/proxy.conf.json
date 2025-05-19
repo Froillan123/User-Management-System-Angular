@@ -1,6 +1,6 @@
 {
   "/accounts": {
-    "target": "https://user-management-system-angular-maverick.onrender.com",
+    "target": "https://user-management-system-angular-lopez.onrender.com",
     "secure": true,
     "changeOrigin": true,
     "logLevel": "debug",
