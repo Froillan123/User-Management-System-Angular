@@ -1,7 +1,11 @@
 {
   "development": {
     "database": {
-      "url": "postgresql://postgres:tldSyjLsJlErJdwBkKMnPskMDdtONPhV@shuttle.proxy.rlwy.net:17276/railway"
+      "host": "153.92.15.31",
+      "user": "u875409848_villarta",
+      "password": "9T2Z5$3UKkgSYzE",
+      "database": "u875409848_villarta",
+      "dialect": "mysql"
     },
     "secret": "STARTTLS_DEV_SECRET",
     "emailFrom": "froillan.edem@gmail.com",
@@ -24,7 +28,11 @@
   },
   "production": {
     "database": {
-      "url": "postgresql://postgres:tldSyjLsJlErJdwBkKMnPskMDdtONPhV@shuttle.proxy.rlwy.net:17276/railway"
+      "host": "153.92.15.31",
+      "user": "u875409848_villarta",
+      "password": "9T2Z5$3UKkgSYzE",
+      "database": "u875409848_villarta",
+      "dialect": "mysql"
     },
     "secret": "STARTTLS",
     "emailFrom": "froillan.edem@gmail.com",

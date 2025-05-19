@@ -70,9 +70,9 @@ app.options('*', (req, res) => {
     res.sendStatus(200);
 });
 
-// Automatic workflow cleanup on server startup
+// Automatic workflow cleanup on server startup AFTER database initialization
 console.log('Initializing automatic workflow cleanup...');
-setTimeout(async () => {
+db.events.on('initialized', async () => {
     try {
         const workflowCleanup = require('./_helpers/workflow-cleanup');
         await workflowCleanup.cleanupAllDuplicateWorkflows();
@@ -80,7 +80,7 @@ setTimeout(async () => {
     } catch (error) {
         console.error('Error during automatic workflow cleanup:', error);
     }
-}, 3000); // Wait for DB initialization before running cleanup
+});
 
 // API routes - wrap in try/catch to isolate errors
 try {

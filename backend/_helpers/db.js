@@ -1,11 +1,17 @@
 const config = require('../config.json');
 const { Sequelize } = require('sequelize');
+const EventEmitter = require('events');
+
+// Create an event emitter for database initialization
+const dbEvents = new EventEmitter();
 
 // Determine environment
 const env = process.env.NODE_ENV === 'production' ? 'production' : 'development';
 const envConfig = config[env];
 
-module.exports = db = {};
+module.exports = db = {
+    events: dbEvents
+};
 
 initialize();
 
@@ -13,17 +19,17 @@ async function initialize() {
     try {
         console.log(`Using ${env} database configuration`);
         
-        // Connect Sequelize with PostgreSQL using connection URL
-        const sequelize = new Sequelize(envConfig.database.url, { 
-            dialect: 'postgres',
-            dialectOptions: {
-                ssl: {
-                    require: true,
-                    rejectUnauthorized: false
-                }
-            },
-            logging: console.log // Enable to see SQL queries
-        });
+        // Connect Sequelize with MySQL using connection details
+        const sequelize = new Sequelize(
+            envConfig.database.database,
+            envConfig.database.user,
+            envConfig.database.password, 
+            { 
+                host: envConfig.database.host,
+                dialect: 'mysql',
+                logging: console.log // Enable to see SQL queries
+            }
+        );
 
         // Add sequelize instance to db object for transactions
         db.sequelize = sequelize;
@@ -65,6 +71,9 @@ async function initialize() {
         await sequelize.authenticate();
         await sequelize.sync({ alter: true });
         console.log('Database synchronized');
+        
+        // Emit event when database is fully initialized
+        dbEvents.emit('initialized');
         
     } catch (err) {
         console.error('Database initialization failed:', err);
