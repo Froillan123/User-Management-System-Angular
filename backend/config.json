@@ -2,9 +2,9 @@
   "development": {
     "database": {
       "host": "153.92.15.31",
-      "user": "u875409848_lopez",
+      "user": "u875409848_laygan",
       "password": "9T2Z5$3UKkgSYzE",
-      "database": "u875409848_lopez",
+      "database": "u875409848_laygan",
       "dialect": "mysql"
     },
     "secret": "STARTTLS_DEV_SECRET",
@@ -29,9 +29,9 @@
   "production": {
     "database": {
       "host": "153.92.15.31",
-      "user": "u875409848_lopez",
+      "user": "u875409848_laygan",
       "password": "9T2Z5$3UKkgSYzE",
-      "database": "u875409848_lopez",
+      "database": "u875409848_laygan",
       "dialect": "mysql"
     },
     "secret": "STARTTLS",

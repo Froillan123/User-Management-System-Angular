@@ -2,10 +2,10 @@
 
 <div align="center">
 
-Lopez Branch
+Laygan Branch
 
-frontend- https://user-management-system-angular-lopez.vercel.app
-backend- https://user-management-system-angular-lopez.onrender.com
+frontend- https://user-management-system-angular-laygan.vercel.app
+backend- https://user-management-system-angular-laygan.onrender.com
 
 ![User Management System](frontend/src/assets/images/favico.png)
 

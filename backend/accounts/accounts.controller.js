@@ -278,7 +278,7 @@ function setTokenCookie(res, token) {
         sameSite: isProduction ? 'none' : 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
         path: '/',
-        domain: isProduction ? 'lopez.vercel.app' : undefined // Allow cookie to work across subdomains in production
+        domain: isProduction ? 'laygan.vercel.app' : undefined // Allow cookie to work across subdomains in production
     };
 
     // Set the cookie

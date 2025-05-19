@@ -6,9 +6,9 @@ export const environment = {
     production: false,
     apiUrl: isLocalhost 
         ? 'http://localhost:4000/accounts'
-        : 'https://user-management-system-angular-lopez.onrender.com/accounts',
+        : 'https://user-management-system-angular-laygan.onrender.com/accounts',
     wsUrl: isLocalhost
         ? 'ws://localhost:4000'
-        : 'wss://user-management-system-angular-lopez.onrender.com'
+        : 'wss://user-management-system-angular-laygan.onrender.com'
 };
 
