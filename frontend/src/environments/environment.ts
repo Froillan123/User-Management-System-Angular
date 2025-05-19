@@ -9,4 +9,3 @@ export const environment = {
         ? 'ws://localhost:4000'
         : 'wss://user-management-system-angular.onrender.com'
 };
-
