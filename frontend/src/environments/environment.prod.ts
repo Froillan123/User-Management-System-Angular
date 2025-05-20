@@ -7,10 +7,10 @@ export const environment = {
     production: true,
     apiUrl: isLocalhost 
         ? 'http://localhost:4000/accounts'
-        : 'https://user-management-system-angular-laygan.onrender.com/accounts',
+        : 'https://user-management-system-angular-laygan-bu8d.onrender.com/accounts',
     wsUrl: isLocalhost
         ? 'ws://localhost:4000'
-        : 'wss://user-management-system-angular-laygan.onrender.com',
+        : 'wss://user-management-system-angular-laygan-bu8d.onrender.com',
     cookieDomain: isLocalhost 
         ? undefined 
         : isVercel 
