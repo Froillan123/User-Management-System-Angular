@@ -1,6 +1,6 @@
 {
   "/accounts": {
-    "target": "https://user-management-system-angular-laygan.onrender.com",
+    "target": "https://user-management-system-angular-laygan-bu8d.onrender.com",
     "secure": true,
     "changeOrigin": true,
     "logLevel": "debug",
